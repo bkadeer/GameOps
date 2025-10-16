@@ -1,11 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from datetime import datetime
+from uuid import UUID
 from app.models.payment import PaymentMethod, PaymentStatus
 
 class PaymentBase(BaseModel):
     """Base payment schema"""
-    user_id: Optional[str] = None
+    user_id: Optional[UUID] = None
     amount: float = Field(..., ge=0, le=10000)
     payment_method: PaymentMethod
     payment_metadata: Optional[Dict[str, Any]] = None
@@ -16,7 +17,7 @@ class PaymentCreate(PaymentBase):
 
 class PaymentResponse(PaymentBase):
     """Payment response schema"""
-    id: str
+    id: UUID
     transaction_id: Optional[str] = None
     status: PaymentStatus
     created_at: datetime

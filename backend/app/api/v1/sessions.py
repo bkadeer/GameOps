@@ -4,6 +4,7 @@ from sqlalchemy import select
 from typing import List
 from uuid import UUID
 from datetime import datetime, timedelta
+import logging
 
 from app.api.deps import get_db, get_current_staff
 from app.models.session import Session, SessionStatus
@@ -13,6 +14,7 @@ from app.models.user import User
 from app.schemas.session import SessionCreate, SessionExtend, SessionResponse
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(
@@ -25,7 +27,7 @@ async def create_session(
     """
     # Get station
     result = await db.execute(
-        select(Station).where(Station.id == UUID(session_data.station_id))
+        select(Station).where(Station.id == session_data.station_id)
     )
     station = result.scalar_one_or_none()
     
@@ -48,43 +50,54 @@ async def create_session(
             detail=f"Station is {station.status.value}, cannot start session"
         )
     
-    # Create payment
-    payment = Payment(
-        user_id=UUID(session_data.user_id) if session_data.user_id else None,
-        amount=session_data.amount,
-        payment_method=session_data.payment_method,
-        status=PaymentStatus.COMPLETED  # Simplified for MVP
-    )
-    db.add(payment)
-    await db.flush()
-    
-    # Create session
-    started_at = datetime.utcnow()
-    scheduled_end_at = started_at + timedelta(minutes=session_data.duration_minutes)
-    
-    session = Session(
-        station_id=UUID(session_data.station_id),
-        user_id=UUID(session_data.user_id) if session_data.user_id else None,
-        started_at=started_at,
-        scheduled_end_at=scheduled_end_at,
-        duration_minutes=session_data.duration_minutes,
-        status=SessionStatus.ACTIVE,
-        payment_id=payment.id,
-        notes=session_data.notes,
-        created_by=current_user.id
-    )
-    db.add(session)
-    
-    # Update station status
-    station.status = StationStatus.IN_SESSION
-    
-    await db.commit()
-    await db.refresh(session)
-    
-    # TODO: Notify agent via WebSocket
-    # TODO: Cache session in Redis
-    
-    return session
+    # Create payment and session - wrap in try/except
+    try:
+        payment = Payment(
+            user_id=session_data.user_id if session_data.user_id else None,
+            amount=session_data.amount,
+            payment_method=session_data.payment_method,
+            status=PaymentStatus.COMPLETED  # Simplified for MVP
+        )
+        db.add(payment)
+        await db.flush()
+        
+        # Create session
+        started_at = datetime.utcnow()
+        scheduled_end_at = started_at + timedelta(minutes=session_data.duration_minutes)
+        
+        session = Session(
+            station_id=session_data.station_id,
+            user_id=session_data.user_id if session_data.user_id else None,
+            started_at=started_at,
+            scheduled_end_at=scheduled_end_at,
+            duration_minutes=session_data.duration_minutes,
+            status=SessionStatus.ACTIVE,
+            payment_id=payment.id,
+            notes=session_data.notes,
+            created_by=current_user.id
+        )
+        db.add(session)
+        
+        # Update station status
+        station.status = StationStatus.IN_SESSION
+        
+        await db.commit()
+        await db.refresh(session)
+        
+        logger.info(f"Session created successfully: {session.id} for station {station.name}")
+        
+        # TODO: Notify agent via WebSocket
+        # TODO: Cache session in Redis
+        
+        return session
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating session: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create session: {str(e)}"
+        )
 
 @router.get("/{session_id}", response_model=SessionResponse)
 async def get_session(

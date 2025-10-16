@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional
 from uuid import UUID
+import logging
 
 from app.api.deps import get_db, get_current_staff, get_current_admin
 from app.models.station import Station, StationStatus, StationType
@@ -10,6 +11,7 @@ from app.models.user import User
 from app.schemas.station import StationCreate, StationUpdate, StationResponse
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.get("", response_model=List[StationResponse])
 async def list_stations(
@@ -65,6 +67,8 @@ async def create_station(
     """
     Create a new station (Admin only)
     """
+    logger.info(f"Creating station: {station_data.name}")
+    
     # Check if station name already exists
     result = await db.execute(
         select(Station).where(Station.name == station_data.name)
@@ -72,18 +76,29 @@ async def create_station(
     existing = result.scalar_one_or_none()
     
     if existing:
+        logger.warning(f"Station name already exists: {station_data.name}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Station with this name already exists"
+            detail=f"Station with name '{station_data.name}' already exists"
         )
     
-    # Create station
-    station = Station(**station_data.model_dump())
-    db.add(station)
-    await db.commit()
-    await db.refresh(station)
-    
-    return station
+    # Create station - wrap in try/except to catch database errors
+    try:
+        station = Station(**station_data.model_dump())
+        db.add(station)
+        await db.commit()
+        await db.refresh(station)
+        
+        logger.info(f"Station created successfully: {station.name} (ID: {station.id})")
+        return station
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating station: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create station: {str(e)}"
+        )
 
 @router.put("/{station_id}", response_model=StationResponse)
 async def update_station(
@@ -106,15 +121,25 @@ async def update_station(
             detail="Station not found"
         )
     
-    # Update fields
-    update_data = station_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(station, field, value)
-    
-    await db.commit()
-    await db.refresh(station)
-    
-    return station
+    # Update fields - wrap in try/except
+    try:
+        update_data = station_data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(station, field, value)
+        
+        await db.commit()
+        await db.refresh(station)
+        
+        logger.info(f"Station updated successfully: {station.name} (ID: {station.id})")
+        return station
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating station: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update station: {str(e)}"
+        )
 
 @router.delete("/{station_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_station(
@@ -136,7 +161,18 @@ async def delete_station(
             detail="Station not found"
         )
     
-    await db.delete(station)
-    await db.commit()
-    
-    return None
+    # Delete station - wrap in try/except
+    try:
+        await db.delete(station)
+        await db.commit()
+        
+        logger.info(f"Station deleted successfully: {station.name} (ID: {station.id})")
+        return None
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error deleting station: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete station: {str(e)}"
+        )

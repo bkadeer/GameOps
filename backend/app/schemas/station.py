@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict, Any
 from datetime import datetime
+from uuid import UUID
 from app.models.station import StationType, ControlMethod, StationStatus
 import re
 
@@ -54,10 +55,24 @@ class StationUpdate(BaseModel):
 
 class StationResponse(StationBase):
     """Station response schema"""
-    id: str
+    id: UUID
     status: StationStatus
     created_at: datetime
     updated_at: datetime
+    
+    @validator('ip_address', pre=True)
+    def convert_ip_address(cls, v):
+        """Convert IPv4Address to string"""
+        if v is not None:
+            return str(v)
+        return v
+    
+    @validator('mac_address', pre=True)
+    def convert_mac_address(cls, v):
+        """Convert MACADDR to string"""
+        if v is not None:
+            return str(v)
+        return v
     
     class Config:
         from_attributes = True
