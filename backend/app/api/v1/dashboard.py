@@ -1,0 +1,94 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from datetime import datetime, timedelta
+
+from app.api.deps import get_db, get_current_staff
+from app.models.station import Station, StationStatus
+from app.models.session import Session, SessionStatus
+from app.models.payment import Payment, PaymentStatus
+from app.models.user import User
+
+router = APIRouter()
+
+@router.get("")
+async def get_dashboard(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_staff)
+):
+    """
+    Get real-time dashboard data
+    """
+    # Count active sessions
+    result = await db.execute(
+        select(func.count(Session.id)).where(Session.status == SessionStatus.ACTIVE)
+    )
+    active_sessions = result.scalar()
+    
+    # Count total stations
+    result = await db.execute(select(func.count(Station.id)))
+    total_stations = result.scalar()
+    
+    # Count available stations
+    result = await db.execute(
+        select(func.count(Station.id)).where(Station.status == StationStatus.ONLINE)
+    )
+    available_stations = result.scalar()
+    
+    # Calculate today's revenue
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    result = await db.execute(
+        select(func.sum(Payment.amount)).where(
+            Payment.status == PaymentStatus.COMPLETED,
+            Payment.created_at >= today_start
+        )
+    )
+    revenue_today = result.scalar() or 0.0
+    
+    # Get all stations with their current sessions
+    result = await db.execute(
+        select(Station).order_by(Station.name)
+    )
+    stations = result.scalars().all()
+    
+    stations_data = []
+    for station in stations:
+        # Get active session for this station
+        session_result = await db.execute(
+            select(Session).where(
+                Session.station_id == station.id,
+                Session.status == SessionStatus.ACTIVE
+            )
+        )
+        session = session_result.scalar_one_or_none()
+        
+        remaining_seconds = None
+        if session:
+            remaining = (session.scheduled_end_at - datetime.utcnow()).total_seconds()
+            remaining_seconds = max(0, int(remaining))
+        
+        stations_data.append({
+            "station": {
+                "id": str(station.id),
+                "name": station.name,
+                "station_type": station.station_type.value,
+                "status": station.status.value,
+                "location": station.location
+            },
+            "session": {
+                "id": str(session.id),
+                "started_at": session.started_at.isoformat(),
+                "scheduled_end_at": session.scheduled_end_at.isoformat(),
+                "duration_minutes": session.duration_minutes
+            } if session else None,
+            "remaining_seconds": remaining_seconds
+        })
+    
+    return {
+        "active_sessions": active_sessions,
+        "total_stations": total_stations,
+        "available_stations": available_stations,
+        "revenue_today": float(revenue_today),
+        "stations": stations_data,
+        "timestamp": datetime.utcnow().isoformat()
+    }

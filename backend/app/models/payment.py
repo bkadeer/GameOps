@@ -26,7 +26,7 @@ class Payment(Base):
     payment_method = Column(SQLEnum(PaymentMethod), nullable=False)
     transaction_id = Column(String(255), nullable=True)
     status = Column(SQLEnum(PaymentStatus), default=PaymentStatus.PENDING, index=True)
-    metadata = Column(JSON)
+    payment_metadata = Column(JSON)  # Renamed from 'metadata' (reserved by SQLAlchemy)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
     

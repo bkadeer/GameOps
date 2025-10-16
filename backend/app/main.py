@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.api.v1 import api_router
 from app.websocket.manager import connection_manager
+from app.websocket.handlers import handle_agent_connection
 from app.scheduler.session_monitor import SessionMonitor
 
 # Configure logging
@@ -53,7 +54,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="EVMS API",
+    title="Console Time Management API",
     description="Esports Venue Management System API",
     version="1.0.0",
     docs_url="/api/docs",
@@ -65,7 +66,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,6 +74,12 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
+
+# WebSocket endpoint for agents
+@app.websocket("/ws/agent/{station_id}")
+async def websocket_agent_endpoint(websocket: WebSocket, station_id: str, token: str = ""):
+    """WebSocket endpoint for PC agents"""
+    await handle_agent_connection(websocket, station_id, token)
 
 # Health check endpoint
 @app.get("/health")

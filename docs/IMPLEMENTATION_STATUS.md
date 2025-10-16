@@ -114,8 +114,11 @@
 ## Phase 5: Testing & Quality Assurance 📋 PENDING
 
 ### Backend Tests
-- [ ] Unit tests for services
-- [ ] Integration tests for API endpoints
+- [ ] Unit tests for authentication endpoints
+- [ ] Unit tests for stations endpoints
+- [ ] Unit tests for sessions endpoints
+- [ ] Unit tests for users endpoints
+- [ ] Unit tests for dashboard endpoint
 - [ ] WebSocket connection tests
 - [ ] Database migration tests
 - [ ] Load testing (100+ concurrent connections)

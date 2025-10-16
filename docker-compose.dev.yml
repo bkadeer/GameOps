@@ -1,0 +1,48 @@
+version: '3.8'
+
+# Minimal development setup - just the essentials
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: evms-postgres-dev
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-evms}
+      - POSTGRES_USER=${POSTGRES_USER:-evms_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Changed port to avoid conflict
+    networks:
+      - evms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-evms_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: evms-redis-dev
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-dev-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - evms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  evms-network:
+    driver: bridge
+
+volumes:
+  postgres-dev-data:
+  redis-dev-data:
