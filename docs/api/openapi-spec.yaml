@@ -1,0 +1,753 @@
+openapi: 3.0.3
+info:
+  title: Esports Venue Management System API
+  version: 1.0.0
+  description: |
+    REST API for managing gaming sessions, stations, users, and payments in esports venues.
+    
+    ## Authentication
+    All endpoints except `/auth/login` require a valid JWT token in the Authorization header:
+    ```
+    Authorization: Bearer <token>
+    ```
+    
+    ## WebSocket
+    Real-time communication with PC agents uses WebSocket at `/ws/agent/{station_id}`.
+    
+  contact:
+    name: API Support
+    email: support@venue.local
+
+servers:
+  - url: https://api.venue.local/api/v1
+    description: Production server
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: Login and token management
+  - name: Sessions
+    description: Gaming session operations
+  - name: Stations
+    description: Station management
+  - name: Users
+    description: User and membership management
+  - name: Payments
+    description: Payment processing
+  - name: Dashboard
+    description: Real-time dashboard data
+  - name: Admin
+    description: Administrative operations
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Station:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "PC-01"
+        station_type:
+          type: string
+          enum: [PC, PS5, XBOX, SWITCH]
+        location:
+          type: string
+          example: "Floor 1, Row A"
+        ip_address:
+          type: string
+          format: ipv4
+        mac_address:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+        control_method:
+          type: string
+          enum: [AGENT, SMART_PLUG, ROUTER]
+        control_address:
+          type: string
+          example: "192.168.30.101"
+        status:
+          type: string
+          enum: [ONLINE, OFFLINE, IN_SESSION, MAINTENANCE]
+        specs:
+          type: object
+          properties:
+            cpu:
+              type: string
+            gpu:
+              type: string
+            ram_gb:
+              type: integer
+            storage_gb:
+              type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        station_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        scheduled_end_at:
+          type: string
+          format: date-time
+        actual_end_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_minutes:
+          type: integer
+          example: 60
+        extended_minutes:
+          type: integer
+          example: 0
+        status:
+          type: string
+          enum: [ACTIVE, EXPIRED, STOPPED, PAUSED]
+        payment_id:
+          type: string
+          format: uuid
+        notes:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, STAFF, CUSTOMER]
+        membership_tier:
+          type: string
+          enum: [BASIC, PREMIUM, VIP]
+          nullable: true
+        balance:
+          type: number
+          format: decimal
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        amount:
+          type: number
+          format: decimal
+        payment_method:
+          type: string
+          enum: [CASH, CARD, BALANCE, ONLINE]
+        transaction_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    SessionStartRequest:
+      type: object
+      required:
+        - station_id
+        - duration_minutes
+      properties:
+        station_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        duration_minutes:
+          type: integer
+          minimum: 15
+          maximum: 480
+          example: 60
+        payment_method:
+          type: string
+          enum: [CASH, CARD, BALANCE, ONLINE]
+        amount:
+          type: number
+          format: decimal
+        notes:
+          type: string
+
+    SessionExtendRequest:
+      type: object
+      required:
+        - additional_minutes
+      properties:
+        additional_minutes:
+          type: integer
+          minimum: 15
+          maximum: 240
+          example: 30
+        payment_method:
+          type: string
+          enum: [CASH, CARD, BALANCE, ONLINE]
+        amount:
+          type: number
+          format: decimal
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: bearer
+                  expires_in:
+                    type: integer
+                    example: 1800
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+
+  /sessions:
+    get:
+      tags:
+        - Sessions
+      summary: List sessions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, EXPIRED, STOPPED, PAUSED]
+        - name: station_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+    post:
+      tags:
+        - Sessions
+      summary: Start a new session
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionStartRequest'
+      responses:
+        '201':
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Station already in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/{session_id}:
+    get:
+      tags:
+        - Sessions
+      summary: Get session details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: Session not found
+
+    delete:
+      tags:
+        - Sessions
+      summary: Stop a session
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session stopped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: Session not found
+
+  /sessions/{session_id}/extend:
+    put:
+      tags:
+        - Sessions
+      summary: Extend session duration
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionExtendRequest'
+      responses:
+        '200':
+          description: Session extended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: Session not found
+        '400':
+          description: Cannot extend inactive session
+
+  /stations:
+    get:
+      tags:
+        - Stations
+      summary: List all stations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ONLINE, OFFLINE, IN_SESSION, MAINTENANCE]
+        - name: station_type
+          in: query
+          schema:
+            type: string
+            enum: [PC, PS5, XBOX, SWITCH]
+      responses:
+        '200':
+          description: List of stations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Station'
+
+    post:
+      tags:
+        - Stations
+      summary: Create a new station
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Station'
+      responses:
+        '201':
+          description: Station created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Station'
+
+  /stations/{station_id}:
+    get:
+      tags:
+        - Stations
+      summary: Get station details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: station_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Station details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Station'
+
+    put:
+      tags:
+        - Stations
+      summary: Update station
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: station_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Station'
+      responses:
+        '200':
+          description: Station updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Station'
+
+    delete:
+      tags:
+        - Stations
+      summary: Delete station
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: station_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Station deleted
+
+  /dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Get real-time dashboard data
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active_sessions:
+                    type: integer
+                  total_stations:
+                    type: integer
+                  available_stations:
+                    type: integer
+                  revenue_today:
+                    type: number
+                    format: decimal
+                  stations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        station:
+                          $ref: '#/components/schemas/Station'
+                        session:
+                          $ref: '#/components/schemas/Session'
+                          nullable: true
+                        remaining_seconds:
+                          type: integer
+                          nullable: true
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [ADMIN, STAFF, CUSTOMER]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+    post:
+      tags:
+        - Users
+      summary: Create user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /payments:
+    get:
+      tags:
+        - Payments
+      summary: List payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+
+    post:
+      tags:
+        - Payments
+      summary: Process payment
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '201':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
