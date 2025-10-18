@@ -1,18 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut, Plus } from 'lucide-react'
+import toast from 'react-hot-toast'
 import StationGrid from './StationGrid'
 import SessionsList from './SessionsList'
 import StatsCards from './StatsCards'
 import AddStationModal from './AddStationModal'
 import StartSessionModal from './StartSessionModal'
 import { useStore } from '@/store/useStore'
-import { stationsAPI, sessionsAPI, dashboardAPI } from '@/lib/api'
+import { stationsAPI, sessionsAPI, dashboardAPI, authAPI } from '@/lib/api'
 import type { Station } from '@/types'
 
 export default function Dashboard() {
-  const { stations, sessions, stats, setStations, setSessions, setStats } = useStore()
+  const router = useRouter()
+  const { stations, sessions, stats, setStations, setSessions, setStats, user, clearUser } = useStore()
   const [loading, setLoading] = useState(true)
   const [showAddStation, setShowAddStation] = useState(false)
   const [showStartSession, setShowStartSession] = useState(false)
@@ -52,6 +55,13 @@ export default function Dashboard() {
     setShowStartSession(true)
   }
 
+  const handleLogout = () => {
+    authAPI.logout()
+    clearUser()
+    toast.success('Logged out successfully')
+    router.push('/login')
+  }
+
   return (
     <div className="min-h-screen bg-[#1C1C1C]">
       {/* Top Navigation */}
@@ -69,11 +79,24 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors">
+              {user && (
+                <div className="text-right mr-2">
+                  <p className="text-sm text-[#E5E5E5] font-medium">{user.username}</p>
+                  <p className="text-xs text-[#A0A0A0]">{user.role}</p>
+                </div>
+              )}
+              <button 
+                className="p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors"
+                title="Settings"
+              >
                 <Settings className="w-5 h-5 text-[#A0A0A0]" />
               </button>
-              <button className="p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors">
-                <LogOut className="w-5 h-5 text-[#A0A0A0]" />
+              <button 
+                onClick={handleLogout}
+                className="p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors group"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5 text-[#A0A0A0] group-hover:text-red-400 transition-colors" />
               </button>
             </div>
           </div>
