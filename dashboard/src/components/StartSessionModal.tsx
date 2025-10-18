@@ -14,21 +14,21 @@ interface StartSessionModalProps {
 }
 
 export default function StartSessionModal({ isOpen, onClose, onSuccess, station }: StartSessionModalProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [formData, setFormData] = useState({
-    duration_minutes: 60,
-    payment_method: 'CASH',
-    amount: 0,
-    notes: ''
-  })
-
   const presetDurations = [30, 60, 120, 180, 240]
   const hourlyRate = 5 // $5 per hour
 
   const calculateAmount = (minutes: number) => {
     return (minutes / 60) * hourlyRate
   }
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [formData, setFormData] = useState({
+    duration_minutes: 60,
+    payment_method: 'CASH',
+    amount: calculateAmount(60), // Initialize with calculated amount
+    notes: ''
+  })
 
   const handleDurationChange = (minutes: number) => {
     setFormData({

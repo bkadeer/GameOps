@@ -5,6 +5,7 @@ import type { Station } from '@/types'
 import { useState } from 'react'
 import { stationsAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
+import EditStationModal from './EditStationModal'
 
 interface StationGridProps {
   stations: Station[]
@@ -14,6 +15,7 @@ interface StationGridProps {
 
 export default function StationGrid({ stations, onStartSession, onUpdate }: StationGridProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [editStation, setEditStation] = useState<Station | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleDelete = async (station: Station) => {
@@ -78,30 +80,36 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {stations.map((station) => {
         const Icon = getIcon(station.station_type)
-        // Only show edit/delete for OFFLINE or MAINTENANCE stations
-        const showActions = station.status === 'OFFLINE' || station.status === 'MAINTENANCE'
+        // Can edit any station except those in active session
+        const canEdit = station.status !== 'IN_SESSION'
+        // Can only delete OFFLINE or MAINTENANCE stations
+        const canDelete = station.status === 'OFFLINE' || station.status === 'MAINTENANCE'
         return (
           <div
             key={station.id}
             className="bg-[#252525] rounded-2xl p-8 border border-[#333333] hover:border-[#ed6802]/50 transition-all duration-300 group relative"
           >
-            {/* Action Buttons - Only show if station is offline or in maintenance */}
-            {showActions && (
+            {/* Action Buttons */}
+            {(canEdit || canDelete) && (
               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => toast('Edit functionality coming soon!', { icon: 'ℹ️' })}
-                  className="p-2 bg-[#2D2D2D] hover:bg-[#ed6802] text-[#A0A0A0] hover:text-white rounded-lg transition-colors"
-                  title="Edit Station"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setDeleteConfirm(station.id)}
-                  className="p-2 bg-[#2D2D2D] hover:bg-red-500 text-[#A0A0A0] hover:text-white rounded-lg transition-colors"
-                  title="Delete Station"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setEditStation(station)}
+                    className="p-2 bg-[#2D2D2D] hover:bg-[#ed6802] text-[#A0A0A0] hover:text-white rounded-lg transition-colors"
+                    title="Edit Station"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => setDeleteConfirm(station.id)}
+                    className="p-2 bg-[#2D2D2D] hover:bg-red-500 text-[#A0A0A0] hover:text-white rounded-lg transition-colors"
+                    title="Delete Station"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
             <div className="flex items-start justify-between mb-8">
@@ -190,6 +198,17 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
           </div>
         </div>
       )}
+
+      {/* Edit Station Modal */}
+      <EditStationModal
+        isOpen={!!editStation}
+        station={editStation}
+        onClose={() => setEditStation(null)}
+        onSuccess={() => {
+          setEditStation(null)
+          if (onUpdate) onUpdate()
+        }}
+      />
     </div>
   )
 }

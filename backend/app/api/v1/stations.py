@@ -120,19 +120,38 @@ async def update_station(
     Update station (Admin only)
     """
     result = await db.execute(
-        select(Station).where(Station.id == station_id)
+        select(Station).where(
+            Station.id == station_id,
+            Station.deleted_at.is_(None)
+        )
     )
     station = result.scalar_one_or_none()
     
     if not station:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Station not found"
+            detail="Station not found or deleted"
         )
     
     # Update fields - wrap in try/except
     try:
         update_data = station_data.model_dump(exclude_unset=True)
+        
+        # Check if name is being changed and if new name already exists
+        if 'name' in update_data and update_data['name'] != station.name:
+            existing = await db.execute(
+                select(Station).where(
+                    Station.name == update_data['name'],
+                    Station.id != station_id,
+                    Station.deleted_at.is_(None)  # Only check non-deleted stations
+                )
+            )
+            if existing.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Station with name '{update_data['name']}' already exists"
+                )
+        
         for field, value in update_data.items():
             setattr(station, field, value)
         
@@ -142,6 +161,9 @@ async def update_station(
         logger.info(f"Station updated successfully: {station.name} (ID: {station.id})")
         return station
         
+    except HTTPException:
+        await db.rollback()
+        raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating station: {str(e)}", exc_info=True)
