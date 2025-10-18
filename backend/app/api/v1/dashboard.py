@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.api.deps import get_db, get_current_staff
 from app.models.station import Station, StationStatus
@@ -36,7 +36,7 @@ async def get_dashboard(
     available_stations = result.scalar()
     
     # Calculate today's revenue
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     result = await db.execute(
         select(func.sum(Payment.amount)).where(
             Payment.status == PaymentStatus.COMPLETED,
@@ -53,18 +53,19 @@ async def get_dashboard(
     
     stations_data = []
     for station in stations:
-        # Get active session for this station
+        # Get active session for this station (limit to 1 in case of duplicates)
         session_result = await db.execute(
             select(Session).where(
                 Session.station_id == station.id,
                 Session.status == SessionStatus.ACTIVE
-            )
+            ).order_by(Session.started_at.desc()).limit(1)
         )
         session = session_result.scalar_one_or_none()
         
         remaining_seconds = None
         if session:
-            remaining = (session.scheduled_end_at - datetime.utcnow()).total_seconds()
+            now = datetime.now(timezone.utc)
+            remaining = (session.scheduled_end_at - now).total_seconds()
             remaining_seconds = max(0, int(remaining))
         
         stations_data.append({
@@ -90,5 +91,5 @@ async def get_dashboard(
         "available_stations": available_stations,
         "revenue_today": float(revenue_today),
         "stations": stations_data,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }

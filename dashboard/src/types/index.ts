@@ -52,6 +52,6 @@ export interface Payment {
 export interface DashboardStats {
   total_stations: number
   active_sessions: number
-  today_revenue: number
-  online_stations: number
+  available_stations: number
+  revenue_today: number
 }

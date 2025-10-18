@@ -1,16 +1,22 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut } from 'lucide-react'
+import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut, Plus } from 'lucide-react'
 import StationGrid from './StationGrid'
 import SessionsList from './SessionsList'
 import StatsCards from './StatsCards'
+import AddStationModal from './AddStationModal'
+import StartSessionModal from './StartSessionModal'
 import { useStore } from '@/store/useStore'
 import { stationsAPI, sessionsAPI, dashboardAPI } from '@/lib/api'
+import type { Station } from '@/types'
 
 export default function Dashboard() {
   const { stations, sessions, stats, setStations, setSessions, setStats } = useStore()
   const [loading, setLoading] = useState(true)
+  const [showAddStation, setShowAddStation] = useState(false)
+  const [showStartSession, setShowStartSession] = useState(false)
+  const [selectedStation, setSelectedStation] = useState<Station | null>(null)
 
   useEffect(() => {
     loadData()
@@ -22,9 +28,14 @@ export default function Dashboard() {
   const loadData = async () => {
     try {
       const [stationsData, sessionsData, statsData] = await Promise.all([
-        stationsAPI.getAll(),
-        sessionsAPI.getAll(),
-        dashboardAPI.getStats(),
+        stationsAPI.getAll().catch(() => []),
+        sessionsAPI.getAll().catch(() => []),
+        dashboardAPI.getStats().catch(() => ({
+          total_stations: 0,
+          active_sessions: 0,
+          available_stations: 0,
+          revenue_today: 0
+        })),
       ])
       setStations(stationsData)
       setSessions(sessionsData)
@@ -34,6 +45,11 @@ export default function Dashboard() {
       console.error('Failed to load data:', error)
       setLoading(false)
     }
+  }
+
+  const handleStartSession = (station: Station) => {
+    setSelectedStation(station)
+    setShowStartSession(true)
   }
 
   return (
@@ -77,8 +93,17 @@ export default function Dashboard() {
 
             {/* Station Grid */}
             <div>
-              <h2 className="text-lg font-semibold text-[#E5E5E5] mb-4">Gaming Stations</h2>
-              <StationGrid stations={stations} />
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[#E5E5E5]">Gaming Stations</h2>
+                <button
+                  onClick={() => setShowAddStation(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#ed6802] hover:bg-[#ff7a1a] text-white rounded-lg font-medium transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Station
+                </button>
+              </div>
+              <StationGrid stations={stations} onStartSession={handleStartSession} />
             </div>
 
             {/* Active Sessions */}
@@ -89,6 +114,19 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      {/* Modals */}
+      <AddStationModal
+        isOpen={showAddStation}
+        onClose={() => setShowAddStation(false)}
+        onSuccess={loadData}
+      />
+      <StartSessionModal
+        isOpen={showStartSession}
+        onClose={() => setShowStartSession(false)}
+        onSuccess={loadData}
+        station={selectedStation}
+      />
     </div>
   )
 }

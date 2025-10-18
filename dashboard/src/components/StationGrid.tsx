@@ -5,9 +5,10 @@ import type { Station } from '@/types'
 
 interface StationGridProps {
   stations: Station[]
+  onStartSession: (station: Station) => void
 }
 
-export default function StationGrid({ stations }: StationGridProps) {
+export default function StationGrid({ stations, onStartSession }: StationGridProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ONLINE':
@@ -98,7 +99,10 @@ export default function StationGrid({ stations }: StationGridProps) {
             </div>
 
             {station.status === 'ONLINE' && (
-              <button className="w-full mt-4 bg-[#ed6802] hover:bg-[#ff7a1a] text-white py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+              <button 
+                onClick={() => onStartSession(station)}
+                className="w-full mt-4 bg-[#ed6802] hover:bg-[#ff7a1a] text-white py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+              >
                 <Play className="w-4 h-4" />
                 Start Session
               </button>

@@ -25,14 +25,14 @@ export default function StatsCards({ stats }: StatsCardsProps) {
       color: 'from-green-500 to-green-600',
     },
     {
-      title: 'Online Stations',
-      value: stats.online_stations,
+      title: 'Available Stations',
+      value: stats.available_stations,
       icon: Users,
       color: 'from-purple-500 to-purple-600',
     },
     {
       title: 'Today Revenue',
-      value: formatCurrency(stats.today_revenue),
+      value: formatCurrency(stats.revenue_today),
       icon: DollarSign,
       color: 'from-[#ed6802] to-[#ff7a1a]',
     },

@@ -17,6 +17,20 @@ from app.websocket.manager import connection_manager
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+@router.get("", response_model=List[SessionResponse])
+async def get_all_sessions(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_staff)
+):
+    """
+    Get all sessions
+    """
+    result = await db.execute(
+        select(Session).order_by(Session.started_at.desc())
+    )
+    sessions = result.scalars().all()
+    return sessions
+
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(
     session_data: SessionCreate,

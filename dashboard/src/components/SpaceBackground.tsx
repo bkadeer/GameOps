@@ -49,29 +49,31 @@ export default function SpaceBackground() {
       })
     }
 
-    // Nebula clouds
-    interface Cloud {
+    // Light rays (random directions across screen)
+    interface LightRay {
       x: number
       y: number
-      radius: number
-      speedX: number
-      speedY: number
-      hue: number
+      length: number
+      angle: number
+      opacity: number
+      speed: number
     }
 
-    const clouds: Cloud[] = []
-    const cloudCount = 8
-
-    for (let i = 0; i < cloudCount; i++) {
-      clouds.push({
+    const lightRays: LightRay[] = []
+    for (let i = 0; i < 8; i++) {
+      lightRays.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        radius: 100 + Math.random() * 200,
-        speedX: (Math.random() - 0.5) * 0.3,
-        speedY: (Math.random() - 0.5) * 0.3,
-        hue: 200 + Math.random() * 60, // Blue to purple range
+        length: 150 + Math.random() * 400,
+        angle: Math.random() * Math.PI * 2, // Full 360 degrees
+        opacity: Math.random() * 0.12 + 0.03,
+        speed: 0.0003 + Math.random() * 0.0008,
       })
     }
+
+    // Parallax offset
+    let parallaxX = 0
+    let parallaxY = 0
 
 
     // Animation loop
@@ -85,37 +87,26 @@ export default function SpaceBackground() {
       ctx.fillStyle = gradient
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Draw nebula clouds
-      clouds.forEach((cloud) => {
-        const gradient = ctx.createRadialGradient(
-          cloud.x,
-          cloud.y,
-          0,
-          cloud.x,
-          cloud.y,
-          cloud.radius
-        )
-        gradient.addColorStop(0, `hsla(${cloud.hue}, 70%, 50%, 0.08)`)
-        gradient.addColorStop(0.5, `hsla(${cloud.hue}, 60%, 40%, 0.03)`)
-        gradient.addColorStop(1, 'transparent')
+      // Update parallax based on mouse position (subtle drift)
+      parallaxX += (Math.sin(Date.now() * 0.0001) * 0.5)
+      parallaxY += (Math.cos(Date.now() * 0.00015) * 0.3)
 
-        ctx.fillStyle = gradient
-        ctx.fillRect(
-          cloud.x - cloud.radius,
-          cloud.y - cloud.radius,
-          cloud.radius * 2,
-          cloud.radius * 2
-        )
-
-        // Move clouds
-        cloud.x += cloud.speedX
-        cloud.y += cloud.speedY
-
-        // Wrap around
-        if (cloud.x < -cloud.radius) cloud.x = canvas.width + cloud.radius
-        if (cloud.x > canvas.width + cloud.radius) cloud.x = -cloud.radius
-        if (cloud.y < -cloud.radius) cloud.y = canvas.height + cloud.radius
-        if (cloud.y > canvas.height + cloud.radius) cloud.y = -cloud.radius
+      // Draw light rays (random directions)
+      lightRays.forEach((ray) => {
+        ray.opacity = Math.sin(Date.now() * ray.speed) * 0.08 + 0.06
+        
+        ctx.save()
+        ctx.translate(ray.x + parallaxX * 1.5, ray.y + parallaxY * 1.5)
+        ctx.rotate(ray.angle)
+        
+        const rayGradient = ctx.createLinearGradient(0, 0, ray.length, 0)
+        rayGradient.addColorStop(0, `rgba(255, 255, 255, ${ray.opacity})`)
+        rayGradient.addColorStop(0.4, `rgba(217, 122, 50, ${ray.opacity * 0.4})`)
+        rayGradient.addColorStop(1, 'transparent')
+        
+        ctx.fillStyle = rayGradient
+        ctx.fillRect(0, -0.5, ray.length, 1)
+        ctx.restore()
       })
 
       // Draw stars
