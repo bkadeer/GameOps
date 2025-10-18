@@ -1,3 +1,23 @@
+# GameOps Dashboard
+
+A modern, futuristic gaming station management dashboard with a space-cruise theme.
+
+## Features
+
+- 🎮 Real-time station monitoring
+- ⏱️ Live session tracking with countdown timers
+- 📊 Revenue analytics and statistics
+- 🌌 Immersive space-themed UI
+- 🔐 Secure authentication
+
+## Login Credentials
+
+**Default Admin Account:**
+- Username: `admin`
+- Password: `Admin123!`
+
+## Getting Started
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
