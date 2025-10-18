@@ -21,6 +21,8 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
     location: '',
     ip_address: '',
     mac_address: '',
+    control_method: 'AGENT' as const,
+    control_address: '',
     specs: {
       cpu: '',
       gpu: '',
@@ -59,7 +61,13 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
 
     try {
       await stationsAPI.create({
-        ...formData,
+        name: formData.name,
+        station_type: formData.station_type,
+        location: formData.location || undefined,
+        ip_address: formData.ip_address || undefined,
+        mac_address: formData.mac_address || undefined,
+        control_method: 'AGENT',
+        control_address: formData.control_address || undefined,
         specs: {
           cpu: formData.specs.cpu || undefined,
           gpu: formData.specs.gpu || undefined,
@@ -76,6 +84,8 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
         location: '',
         ip_address: '',
         mac_address: '',
+        control_method: 'AGENT' as const,
+        control_address: '',
         specs: { cpu: '', gpu: '', ram_gb: '' }
       })
     } catch (err: any) {

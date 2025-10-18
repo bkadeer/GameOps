@@ -26,6 +26,17 @@ api.interceptors.response.use(
     if (error.response) {
       // Server responded with error status
       console.error('API Error:', error.response.status, error.response.data)
+      
+      // Handle 401 Unauthorized - redirect to login
+      if (error.response.status === 401) {
+        console.warn('Authentication expired. Redirecting to login...')
+        localStorage.removeItem('access_token')
+        if (typeof window !== 'undefined') {
+          // Store a flag to show message on login page
+          sessionStorage.setItem('auth_expired', 'true')
+          window.location.href = '/login'
+        }
+      }
     } else if (error.request) {
       // Request made but no response
       console.error('Network Error: No response from server. Is the backend running?')
@@ -98,7 +109,7 @@ export const sessionsAPI = {
     return response.data
   },
   end: async (id: string): Promise<Session> => {
-    const response = await api.put(`/sessions/${id}/end`)
+    const response = await api.delete(`/sessions/${id}`)
     return response.data
   },
 }

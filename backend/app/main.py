@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.api.v1 import api_router
 from app.websocket.manager import connection_manager
+from app.websocket.dashboard_manager import dashboard_manager
 from app.websocket.handlers import handle_agent_connection
 from app.scheduler.session_monitor import SessionMonitor
 
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
     
     # Close WebSocket connections
     await connection_manager.disconnect_all()
+    await dashboard_manager.disconnect_all()
     
     logger.info("EVMS Backend shut down successfully")
 
@@ -80,6 +82,22 @@ app.include_router(api_router, prefix="/api/v1")
 async def websocket_agent_endpoint(websocket: WebSocket, station_id: str, token: str = ""):
     """WebSocket endpoint for PC agents"""
     await handle_agent_connection(websocket, station_id, token)
+
+# WebSocket endpoint for dashboard
+@app.websocket("/ws/dashboard")
+async def websocket_dashboard_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for dashboard real-time updates"""
+    await dashboard_manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive and listen for messages
+            data = await websocket.receive_text()
+            # Dashboard can send heartbeat or other messages if needed
+            logger.debug(f"Received from dashboard: {data}")
+    except Exception as e:
+        logger.error(f"Dashboard WebSocket error: {e}")
+    finally:
+        dashboard_manager.disconnect(websocket)
 
 # Health check endpoint
 @app.get("/health")

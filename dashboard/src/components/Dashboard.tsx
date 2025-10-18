@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut, Plus } from 'lucide-react'
+import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut, Plus, Wifi, WifiOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import StationGrid from './StationGrid'
 import SessionsList from './SessionsList'
@@ -11,6 +11,7 @@ import AddStationModal from './AddStationModal'
 import StartSessionModal from './StartSessionModal'
 import { useStore } from '@/store/useStore'
 import { stationsAPI, sessionsAPI, dashboardAPI, authAPI } from '@/lib/api'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import type { Station } from '@/types'
 
 export default function Dashboard() {
@@ -21,11 +22,61 @@ export default function Dashboard() {
   const [showStartSession, setShowStartSession] = useState(false)
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
 
+  // WebSocket connection for real-time updates
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/dashboard'
+  
+  // Memoize WebSocket callbacks to prevent reconnections
+  const handleStationUpdate = useCallback((data: any) => {
+    console.log('Station update received:', data)
+    stationsAPI.getAll().then(setStations).catch(console.error)
+  }, [setStations])
+
+  const handleSessionUpdate = useCallback((data: any) => {
+    console.log('Session update received:', data)
+    Promise.all([
+      sessionsAPI.getAll(),
+      dashboardAPI.getStats()
+    ]).then(([sessionsData, statsData]) => {
+      setSessions(sessionsData)
+      setStats(statsData)
+    }).catch(console.error)
+  }, [setSessions, setStats])
+
+  const handleStatsUpdate = useCallback((data: any) => {
+    console.log('Stats update received:', data)
+    setStats(data)
+  }, [setStats])
+
+  const handleConnect = useCallback(() => {
+    console.log('✅ Dashboard connected to real-time updates')
+    // Only show toast once, not on every reconnect
+    toast.success('Connected to real-time updates', { 
+      duration: 2000,
+      id: 'ws-connected' // Prevent duplicate toasts
+    })
+  }, [])
+
+  const handleDisconnect = useCallback(() => {
+    console.log('🔌 Dashboard disconnected from real-time updates')
+  }, [])
+
+  const { isConnected } = useWebSocket(WS_URL, {
+    onStationUpdate: handleStationUpdate,
+    onSessionUpdate: handleSessionUpdate,
+    onStatsUpdate: handleStatsUpdate,
+    onConnect: handleConnect,
+    onDisconnect: handleDisconnect,
+  })
+
   useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('access_token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
     loadData()
-    // Refresh every 5 seconds
-    const interval = setInterval(loadData, 5000)
-    return () => clearInterval(interval)
   }, [])
 
   const loadData = async () => {
@@ -79,6 +130,21 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* WebSocket Status Indicator */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#2D2D2D]">
+                {isConnected ? (
+                  <>
+                    <Wifi className="w-4 h-4 text-green-500" />
+                    <span className="text-xs text-green-500 font-medium">Live</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-4 h-4 text-gray-500" />
+                    <span className="text-xs text-gray-500 font-medium">Offline</span>
+                  </>
+                )}
+              </div>
+
               {user && (
                 <div className="text-right mr-2">
                   <p className="text-sm text-[#E5E5E5] font-medium">{user.username}</p>
@@ -126,13 +192,20 @@ export default function Dashboard() {
                   Add Station
                 </button>
               </div>
-              <StationGrid stations={stations} onStartSession={handleStartSession} />
+              <StationGrid 
+                stations={stations} 
+                onStartSession={handleStartSession}
+                onUpdate={loadData}
+              />
             </div>
 
             {/* Active Sessions */}
             <div>
               <h2 className="text-lg font-semibold text-[#E5E5E5] mb-4">Active Sessions</h2>
-              <SessionsList sessions={sessions.filter(s => s.status === 'ACTIVE')} />
+              <SessionsList 
+                sessions={sessions.filter(s => s.status === 'ACTIVE')} 
+                onUpdate={loadData}
+              />
             </div>
           </div>
         )}

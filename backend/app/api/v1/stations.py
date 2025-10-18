@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 async def list_stations(
     status_filter: Optional[StationStatus] = Query(None, alias="status"),
     type_filter: Optional[StationType] = Query(None, alias="station_type"),
+    include_deleted: bool = Query(False, description="Include soft-deleted stations"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_staff)
 ):
@@ -25,6 +26,10 @@ async def list_stations(
     List all stations with optional filters
     """
     query = select(Station)
+    
+    # Filter out soft-deleted stations by default
+    if not include_deleted:
+        query = query.where(Station.deleted_at.is_(None))
     
     if status_filter:
         query = query.where(Station.status == status_filter)
@@ -47,7 +52,10 @@ async def get_station(
     Get station by ID
     """
     result = await db.execute(
-        select(Station).where(Station.id == station_id)
+        select(Station).where(
+            Station.id == station_id,
+            Station.deleted_at.is_(None)  # Exclude soft-deleted
+        )
     )
     station = result.scalar_one_or_none()
     
@@ -145,29 +153,48 @@ async def update_station(
 @router.delete("/{station_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_station(
     station_id: UUID,
+    permanent: bool = Query(False, description="Permanently delete (hard delete)"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin)
 ):
     """
-    Delete station (Admin only)
+    Soft delete station (Admin only)
+    Set permanent=true for hard delete
     """
     result = await db.execute(
-        select(Station).where(Station.id == station_id)
+        select(Station).where(
+            Station.id == station_id,
+            Station.deleted_at.is_(None)  # Only delete non-deleted stations
+        )
     )
     station = result.scalar_one_or_none()
     
     if not station:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Station not found"
+            detail="Station not found or already deleted"
+        )
+    
+    # Check if station has active session
+    if station.status == StationStatus.IN_SESSION:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete station with active session"
         )
     
     # Delete station - wrap in try/except
     try:
-        await db.delete(station)
-        await db.commit()
+        if permanent:
+            # Hard delete - permanently remove from database
+            await db.delete(station)
+            logger.info(f"Station permanently deleted: {station.name} (ID: {station.id})")
+        else:
+            # Soft delete - mark as deleted
+            from datetime import datetime
+            station.deleted_at = datetime.utcnow()
+            logger.info(f"Station soft deleted: {station.name} (ID: {station.id})")
         
-        logger.info(f"Station deleted successfully: {station.name} (ID: {station.id})")
+        await db.commit()
         return None
         
     except Exception as e:
@@ -176,6 +203,45 @@ async def delete_station(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete station: {str(e)}"
+        )
+
+@router.post("/{station_id}/restore", response_model=StationResponse)
+async def restore_station(
+    station_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """
+    Restore a soft-deleted station (Admin only)
+    """
+    result = await db.execute(
+        select(Station).where(
+            Station.id == station_id,
+            Station.deleted_at.isnot(None)  # Only restore deleted stations
+        )
+    )
+    station = result.scalar_one_or_none()
+    
+    if not station:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deleted station not found"
+        )
+    
+    try:
+        station.deleted_at = None
+        await db.commit()
+        await db.refresh(station)
+        
+        logger.info(f"Station restored: {station.name} (ID: {station.id})")
+        return station
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error restoring station: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to restore station: {str(e)}"
         )
 
 @router.post("/{station_id}/generate-token")
