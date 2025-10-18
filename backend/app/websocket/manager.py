@@ -42,6 +42,10 @@ class ConnectionManager:
                 logger.error(f"Error sending message to {station_id}: {e}")
                 self.disconnect(station_id)
     
+    async def send_to_station(self, station_id: str, message: dict):
+        """Alias for send_message - send message to a specific station"""
+        await self.send_message(station_id, message)
+    
     async def broadcast(self, message: dict):
         """Broadcast message to all connected agents"""
         message["timestamp"] = datetime.utcnow().isoformat()

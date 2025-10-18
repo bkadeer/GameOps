@@ -1,0 +1,24 @@
+agent:
+  station_id: 8d1bf804-8bf4-4e95-be9e-3a818627895c
+  station_name: PC-1
+backend:
+  api_url: http://localhost:8000/api/v1
+  heartbeat_interval: 30
+  reconnect_interval: 5
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZ2VudF84ZDFiZjgwNC04YmY0LTRlOTUtYmU5ZS0zYTgxODYyNzg5NWMiLCJzdGF0aW9uX2lkIjoiOGQxYmY4MDQtOGJmNC00ZTk1LWJlOWUtM2E4MTg2Mjc4OTVjIiwidHlwZSI6ImFnZW50IiwiZXhwIjoxNzYwODQ1ODMxLCJpYXQiOjE3NjA3NTk0MzF9.YKJ3nnDa2Qsu0FRJnD8IVqK4u404X6huvDYeghHoH-E
+  url: ws://localhost:8000/ws/agent
+features:
+  auto_lock: true
+  auto_logout: true
+  block_shutdown: true
+  show_notifications: true
+session:
+  check_interval: 10
+  grace_period: 60
+  warning_time: 300
+system:
+  log_backup_count: 5
+  log_file: agent.log
+  log_level: INFO
+  log_max_size: 10485760
+  monitor_interval: 60

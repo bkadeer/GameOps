@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
@@ -55,7 +55,7 @@ class SessionMonitor:
     async def _check_sessions(self):
         """Check for expired and expiring sessions"""
         async with AsyncSessionLocal() as db:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             
             # Get all active sessions
             result = await db.execute(
@@ -64,7 +64,12 @@ class SessionMonitor:
             active_sessions = result.scalars().all()
             
             for session in active_sessions:
-                time_remaining = (session.scheduled_end_at - now).total_seconds()
+                # Make scheduled_end_at timezone-aware if it isn't
+                scheduled_end = session.scheduled_end_at
+                if scheduled_end.tzinfo is None:
+                    scheduled_end = scheduled_end.replace(tzinfo=timezone.utc)
+                
+                time_remaining = (scheduled_end - now).total_seconds()
                 
                 # Session expired
                 if time_remaining <= 0:

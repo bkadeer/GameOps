@@ -9,6 +9,7 @@ from app.api.deps import get_db, get_current_staff, get_current_admin
 from app.models.station import Station, StationStatus, StationType
 from app.models.user import User
 from app.schemas.station import StationCreate, StationUpdate, StationResponse
+from app.core.security import create_agent_token
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -176,3 +177,41 @@ async def delete_station(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete station: {str(e)}"
         )
+
+@router.post("/{station_id}/generate-token")
+async def generate_agent_token(
+    station_id: UUID,
+    expires_days: int = Query(default=365, ge=1, le=3650),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """
+    Generate agent authentication token for a station (Admin only)
+    
+    This token is used by the PC agent to authenticate WebSocket connections.
+    Default expiration is 365 days (1 year).
+    """
+    # Verify station exists
+    result = await db.execute(
+        select(Station).where(Station.id == station_id)
+    )
+    station = result.scalar_one_or_none()
+    
+    if not station:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Station not found"
+        )
+    
+    # Generate agent token
+    agent_token = create_agent_token(str(station_id), expires_days=expires_days)
+    
+    logger.info(f"Agent token generated for station: {station.name} (ID: {station_id})")
+    
+    return {
+        "station_id": str(station_id),
+        "station_name": station.name,
+        "agent_token": agent_token,
+        "expires_days": expires_days,
+        "note": "Save this token securely. It will be used by the PC agent to authenticate."
+    }

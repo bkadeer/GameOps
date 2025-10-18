@@ -12,6 +12,7 @@ from app.models.station import Station, StationStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.user import User
 from app.schemas.session import SessionCreate, SessionExtend, SessionResponse
+from app.websocket.manager import connection_manager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -86,7 +87,20 @@ async def create_session(
         
         logger.info(f"Session created successfully: {session.id} for station {station.name}")
         
-        # TODO: Notify agent via WebSocket
+        # Notify agent via WebSocket
+        await connection_manager.send_to_station(str(session.station_id), {
+            "type": "session_start",
+            "data": {
+                "id": str(session.id),
+                "user_id": str(session.user_id) if session.user_id else None,
+                "started_at": session.started_at.isoformat(),
+                "scheduled_end_at": session.scheduled_end_at.isoformat(),
+                "duration_minutes": session.duration_minutes,
+                "extended_minutes": session.extended_minutes,
+            }
+        })
+        logger.info(f"Session start notification sent to station {station.name}")
+        
         # TODO: Cache session in Redis
         
         return session
