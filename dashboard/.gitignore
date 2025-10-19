@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 # Allow lib folder for Next.js
 !src/lib/
+
+# video files
+/public/*.mp4
+/public/*.mov
+/public/*.avi
+/public/*.webm

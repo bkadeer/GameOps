@@ -6,7 +6,7 @@ import { Gamepad2, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { authAPI } from "@/lib/api";
 import { useStore } from "@/store/useStore";
-import SpaceBackground from "@/components/SpaceBackground";
+import VideoBackground from "@/components/VideoBackground";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -61,8 +61,8 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Animated Space Background */}
-      <SpaceBackground />
+      {/* Video Background */}
+      <VideoBackground />
 
       {/* Login Card */}
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-12">
