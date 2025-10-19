@@ -21,7 +21,8 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    // Calculate immediately on mount/update
+    const calculateTimeRemaining = () => {
       const newTimeRemaining: Record<string, number> = {}
       sessions.forEach((session) => {
         const endTime = new Date(session.scheduled_end_at).getTime()
@@ -30,7 +31,13 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
         newTimeRemaining[session.id] = remaining
       })
       setTimeRemaining(newTimeRemaining)
-    }, 1000)
+    }
+
+    // Calculate immediately
+    calculateTimeRemaining()
+
+    // Then update every second
+    const interval = setInterval(calculateTimeRemaining, 1000)
 
     return () => clearInterval(interval)
   }, [sessions])

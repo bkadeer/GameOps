@@ -17,6 +17,8 @@ class Session(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     station_id = Column(UUID(as_uuid=True), ForeignKey("stations.id"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     scheduled_end_at = Column(DateTime(timezone=True), nullable=False, index=True)

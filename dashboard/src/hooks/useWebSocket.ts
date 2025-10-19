@@ -65,9 +65,9 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
       }
 
       ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error)
-        console.error('WebSocket URL:', url)
-        console.error('WebSocket readyState:', ws.readyState)
+        console.warn('⚠️ WebSocket connection failed (real-time updates disabled)')
+        console.debug('WebSocket URL:', url)
+        console.debug('WebSocket readyState:', ws.readyState)
         options.onError?.(error)
       }
 

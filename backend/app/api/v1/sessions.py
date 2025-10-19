@@ -13,6 +13,7 @@ from app.models.payment import Payment, PaymentStatus
 from app.models.user import User
 from app.schemas.session import SessionCreate, SessionExtend, SessionResponse
 from app.websocket.manager import connection_manager
+from app.websocket.dashboard_manager import dashboard_manager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -98,6 +99,7 @@ async def create_session(
         
         await db.commit()
         await db.refresh(session)
+        await db.refresh(station)  # Refresh station to load all attributes
         
         logger.info(f"Session created successfully: {session.id} for station {station.name}")
         
@@ -114,6 +116,15 @@ async def create_session(
             }
         })
         logger.info(f"Session start notification sent to station {station.name}")
+        
+        # Broadcast session update to all dashboards
+        session_dict = SessionResponse.model_validate(session).model_dump(mode='json')
+        await dashboard_manager.send_session_update(session_dict)
+        
+        # Also broadcast station status update
+        from app.schemas.station import StationResponse as StationResponseSchema
+        station_dict = StationResponseSchema.model_validate(station).model_dump(mode='json')
+        await dashboard_manager.send_station_update(station_dict)
         
         # TODO: Cache session in Redis
         
@@ -192,6 +203,12 @@ async def extend_session(
     await db.commit()
     await db.refresh(session)
     
+    logger.info(f"Session extended: {session.id} by {extend_data.additional_minutes} minutes")
+    
+    # Broadcast session update to all dashboards
+    session_dict = SessionResponse.model_validate(session).model_dump(mode='json')
+    await dashboard_manager.send_session_update(session_dict)
+    
     # TODO: Notify agent via WebSocket
     # TODO: Update Redis cache
     
@@ -237,6 +254,20 @@ async def stop_session(
     
     await db.commit()
     await db.refresh(session)
+    if station:
+        await db.refresh(station)  # Refresh station to load all attributes
+    
+    logger.info(f"Session stopped: {session.id}")
+    
+    # Broadcast session update to all dashboards
+    session_dict = SessionResponse.model_validate(session).model_dump(mode='json')
+    await dashboard_manager.send_session_update(session_dict)
+    
+    # Broadcast station status update
+    if station:
+        from app.schemas.station import StationResponse as StationResponseSchema
+        station_dict = StationResponseSchema.model_validate(station).model_dump(mode='json')
+        await dashboard_manager.send_station_update(station_dict)
     
     # TODO: Notify agent via WebSocket
     # TODO: Remove from Redis cache

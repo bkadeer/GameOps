@@ -6,10 +6,10 @@ from uuid import UUID
 import logging
 
 from app.api.deps import get_db, get_current_staff, get_current_admin
-from app.models.station import Station, StationStatus, StationType
+from app.models.station import Station, StationType, ControlMethod, StationStatus
 from app.models.user import User
 from app.schemas.station import StationCreate, StationUpdate, StationResponse
-from app.core.security import create_agent_token
+from app.websocket.dashboard_manager import dashboard_manager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -159,6 +159,12 @@ async def update_station(
         await db.refresh(station)
         
         logger.info(f"Station updated successfully: {station.name} (ID: {station.id})")
+        
+        # Broadcast station update to all connected dashboards
+        from app.schemas.station import StationResponse
+        station_dict = StationResponse.model_validate(station).model_dump(mode='json')
+        await dashboard_manager.send_station_update(station_dict)
+        
         return station
         
     except HTTPException:
