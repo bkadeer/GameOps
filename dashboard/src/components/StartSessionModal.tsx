@@ -14,11 +14,18 @@ interface StartSessionModalProps {
 }
 
 export default function StartSessionModal({ isOpen, onClose, onSuccess, station }: StartSessionModalProps) {
-  const presetDurations = [30, 60, 120, 180, 240]
-  const hourlyRate = 5 // $5 per hour
-
+  const presetDurations = [60, 120, 180, 300]
+  
+  // Pricing: 1H $8, 2H $14, 3H $21, 4H $28, 5H $32
   const calculateAmount = (minutes: number) => {
-    return (minutes / 60) * hourlyRate
+    const hours = minutes / 60
+    if (hours <= 1) return 8
+    if (hours <= 2) return 14
+    if (hours <= 3) return 21
+    if (hours <= 4) return 28
+    if (hours <= 5) return 32
+    // For more than 5 hours, use $6.40 per hour rate
+    return Math.round(hours * 6.4)
   }
 
   const [loading, setLoading] = useState(false)
@@ -31,10 +38,20 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
   })
 
   const handleDurationChange = (minutes: number) => {
+    const amount = formData.payment_method === 'ONLINE' ? 0 : calculateAmount(minutes)
     setFormData({
       ...formData,
       duration_minutes: minutes,
-      amount: calculateAmount(minutes)
+      amount: amount
+    })
+  }
+
+  const handlePaymentMethodChange = (method: string) => {
+    const amount = method === 'ONLINE' ? 0 : calculateAmount(formData.duration_minutes)
+    setFormData({
+      ...formData,
+      payment_method: method,
+      amount: amount
     })
   }
 
@@ -50,7 +67,7 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
       return
     }
 
-    if (formData.amount <= 0) {
+    if (formData.payment_method !== 'ONLINE' && formData.amount <= 0) {
       toast.error('Amount must be greater than 0')
       return
     }
@@ -82,7 +99,24 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
         notes: ''
       })
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Failed to start session'
+      console.error('Session creation error:', err)
+      
+      let errorMsg = 'Failed to start session'
+      
+      // Handle different error response formats
+      if (err.response?.data?.detail) {
+        // Check if detail is an array (validation errors)
+        if (Array.isArray(err.response.data.detail)) {
+          errorMsg = err.response.data.detail.map((e: any) => e.msg || e.message).join(', ')
+        } else if (typeof err.response.data.detail === 'string') {
+          errorMsg = err.response.data.detail
+        } else {
+          errorMsg = JSON.stringify(err.response.data.detail)
+        }
+      } else if (err.message) {
+        errorMsg = err.message
+      }
+      
       setError(errorMsg)
       toast.error(errorMsg)
     } finally {
@@ -93,10 +127,16 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
   if (!isOpen || !station) return null
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#252525] rounded-2xl border border-[#333333] max-w-lg w-full">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl border border-neutral-700/50 max-w-lg w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#333333]">
+        <div className="flex items-center justify-between p-6 border-b border-neutral-700/50">
           <div>
             <h2 className="text-xl font-semibold text-[#E5E5E5]">Start Session</h2>
             <p className="text-sm text-[#A0A0A0] mt-1">{station.name} - {station.location}</p>
@@ -123,48 +163,24 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
               <Clock className="w-4 h-4 inline mr-2" />
               Duration
             </label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-4 gap-3">
               {presetDurations.map((minutes) => (
                 <button
                   key={minutes}
                   type="button"
                   onClick={() => handleDurationChange(minutes)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                     formData.duration_minutes === minutes
-                      ? 'border-[#ed6802] bg-[#ed6802]/10'
-                      : 'border-[#333333] bg-[#2D2D2D] hover:border-[#444444]'
+                      ? 'border-[#ed6802] bg-[#ed6802]/10 scale-105'
+                      : 'border-neutral-700/40 bg-neutral-800/60 hover:border-neutral-600/60 hover:scale-105'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-[#E5E5E5] font-semibold">{minutes / 60}h</div>
-                    <div className="text-xs text-[#A0A0A0] mt-1">${calculateAmount(minutes)}</div>
+                    <div className="text-gray-100 font-bold text-lg">{minutes / 60}h</div>
+                    <div className="text-sm text-[#ed6802] font-semibold mt-1.5">${calculateAmount(minutes)}</div>
                   </div>
                 </button>
               ))}
-            </div>
-            
-            {/* Custom Duration */}
-            <div className="mt-3">
-              <label className="block text-xs text-[#A0A0A0] mb-1.5 ml-1">
-                Custom Duration (minutes)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="15"
-                  step="15"
-                  value={formData.duration_minutes}
-                  onChange={(e) => handleDurationChange(parseInt(e.target.value) || 60)}
-                  className="w-full px-4 py-2.5 pr-16 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
-                  placeholder="Enter minutes"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0A0A0] text-sm">
-                  min
-                </span>
-              </div>
-              <p className="text-xs text-[#A0A0A0] mt-1.5 ml-1">
-                = {(formData.duration_minutes / 60).toFixed(1)} hours
-              </p>
             </div>
           </div>
 
@@ -178,42 +194,27 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
               {[
                 { value: 'CASH', label: 'Cash', icon: DollarSign },
                 { value: 'CARD', label: 'Card', icon: CreditCard },
-                { value: 'BALANCE', label: 'Balance', icon: Wallet }
+                { value: 'ONLINE', label: 'Free', icon: DollarSign }
               ].map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setFormData({ ...formData, payment_method: value })}
-                  className={`p-3 rounded-lg border-2 transition-all ${
+                  onClick={() => handlePaymentMethodChange(value)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                     formData.payment_method === value
-                      ? 'border-[#ed6802] bg-[#ed6802]/10'
-                      : 'border-[#333333] bg-[#2D2D2D] hover:border-[#444444]'
+                      ? 'border-[#ed6802] bg-[#ed6802]/10 scale-105'
+                      : 'border-neutral-700/40 bg-neutral-800/60 hover:border-neutral-600/60 hover:scale-105'
                   }`}
                 >
-                  <Icon className="w-5 h-5 text-[#A0A0A0] mx-auto mb-1" />
-                  <div className="text-sm text-[#E5E5E5]">{label}</div>
+                  <Icon className={`w-6 h-6 mx-auto mb-2 ${
+                    value === 'ONLINE' ? 'text-emerald-400' : 'text-gray-400'
+                  }`} />
+                  <div className="text-sm text-gray-100 font-semibold">{label}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Amount */}
-          <div>
-            <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
-              Amount
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A0A0A0]">$</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                className="w-full pl-8 pr-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
-              />
-            </div>
-          </div>
 
           {/* Notes */}
           <div>
@@ -224,24 +225,28 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={2}
-              className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors resize-none"
+              className="w-full px-4 py-2.5 bg-neutral-800/60 border border-neutral-700/40 rounded-xl text-gray-100 focus:outline-none focus:border-[#ed6802] transition-colors resize-none"
               placeholder="Add any notes..."
             />
           </div>
 
           {/* Summary */}
-          <div className="bg-[#2D2D2D] rounded-lg p-4 border border-[#333333]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[#A0A0A0]">Duration</span>
-              <span className="text-[#E5E5E5] font-semibold">{formData.duration_minutes} minutes</span>
+          <div className="bg-neutral-800/40 rounded-xl p-5 border border-neutral-700/40">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-gray-400 text-sm">Duration</span>
+              <span className="text-gray-100 font-semibold">{formData.duration_minutes} minutes</span>
             </div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[#A0A0A0]">Payment</span>
-              <span className="text-[#E5E5E5] font-semibold">{formData.payment_method}</span>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-gray-400 text-sm">Payment</span>
+              <span className="text-gray-100 font-semibold">{formData.payment_method === 'ONLINE' ? 'Free' : formData.payment_method}</span>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-[#333333]">
-              <span className="text-[#E5E5E5] font-semibold">Total</span>
-              <span className="text-[#ed6802] font-bold text-xl">${formData.amount.toFixed(2)}</span>
+            <div className="flex items-center justify-between pt-3 border-t border-neutral-700/40">
+              <span className="text-gray-100 font-bold text-lg">Total</span>
+              <span className={`font-bold text-xl ${
+                formData.payment_method === 'ONLINE' ? 'text-emerald-400' : 'text-[#ed6802]'
+              }`}>
+                {formData.payment_method === 'ONLINE' ? 'FREE' : `$${formData.amount.toFixed(2)}`}
+              </span>
             </div>
           </div>
 
@@ -250,14 +255,14 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-[#2D2D2D] hover:bg-[#333333] text-[#E5E5E5] rounded-lg font-medium transition-colors"
+              className="flex-1 px-6 py-3 bg-neutral-800/60 hover:bg-neutral-700/60 text-gray-100 rounded-xl font-semibold transition-all duration-300 hover:scale-105"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-[#ed6802] hover:bg-[#ff7a1a] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#ed6802] to-[#ff7a1a] hover:from-[#ff7a1a] hover:to-[#ff8c3a] text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#ed6802]/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Starting...' : 'Start Session'}
             </button>

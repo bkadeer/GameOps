@@ -1,9 +1,9 @@
 'use client'
 
-import { Clock, User, Monitor, Pause, StopCircle, Plus, X } from 'lucide-react'
+import { Clock, User, Monitor, Pause, StopCircle, Plus, X, DollarSign, CreditCard } from 'lucide-react'
 import type { Session } from '@/types'
 import { formatDuration } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { sessionsAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -18,19 +18,47 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
   const [showEndModal, setShowEndModal] = useState(false)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [extendMinutes, setExtendMinutes] = useState(30)
+  const [extendPaymentMethod, setExtendPaymentMethod] = useState('CASH')
   const [loading, setLoading] = useState(false)
+  const previousTimeRef = useRef<Record<string, number>>({})
+  
+  // Pricing calculation for extension
+  const calculateExtensionAmount = (minutes: number) => {
+    if (minutes === 30) return 5
+    const hours = minutes / 60
+    if (hours <= 1) return 8
+    if (hours <= 2) return 14
+    if (hours <= 3) return 21
+    return Math.round(hours * 6.4)
+  }
 
   useEffect(() => {
     // Calculate immediately on mount/update
     const calculateTimeRemaining = () => {
       const newTimeRemaining: Record<string, number> = {}
+      let hasExpiredSession = false
+      
       sessions.forEach((session) => {
         const endTime = new Date(session.scheduled_end_at).getTime()
         const now = Date.now()
         const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
         newTimeRemaining[session.id] = remaining
+        
+        // Check if session just expired (was > 0, now is 0)
+        if (remaining === 0 && previousTimeRef.current[session.id] > 0) {
+          hasExpiredSession = true
+        }
       })
+      
+      previousTimeRef.current = newTimeRemaining
       setTimeRemaining(newTimeRemaining)
+      
+      // If any session expired, trigger refresh after a short delay
+      if (hasExpiredSession && onUpdate) {
+        setTimeout(() => {
+          onUpdate()
+        }, 2000) // 2 second delay to show 0s before refresh
+      }
     }
 
     // Calculate immediately
@@ -40,7 +68,7 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
     const interval = setInterval(calculateTimeRemaining, 1000)
 
     return () => clearInterval(interval)
-  }, [sessions])
+  }, [sessions, onUpdate])
 
   const handleExtendClick = (session: Session) => {
     setSelectedSession(session)
@@ -57,15 +85,17 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
     
     setLoading(true)
     try {
+      const amount = extendPaymentMethod === 'ONLINE' ? 0 : calculateExtensionAmount(extendMinutes)
       await sessionsAPI.extend(
         selectedSession.id,
         extendMinutes,
-        'CASH', // Default payment method
-        0 // Amount will be calculated by backend
+        extendPaymentMethod,
+        amount
       )
       toast.success(`Session extended by ${extendMinutes} minutes`)
       setShowExtendModal(false)
       setSelectedSession(null)
+      setExtendPaymentMethod('CASH')
       if (onUpdate) onUpdate()
     } catch (error) {
       console.error('Failed to extend session:', error)
@@ -131,7 +161,7 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
                   <Monitor className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-gray-100 font-bold tracking-tight">Station {session.station_id.slice(0, 8)}</h3>
+                  <h3 className="text-gray-100 font-bold tracking-tight">{session.station?.name || `Station ${session.station_id.slice(0, 8)}`}</h3>
                   <p className="text-gray-400 text-sm flex items-center gap-1.5 font-medium">
                     <User className="w-3.5 h-3.5" />
                     {session.user_id ? session.user_id.slice(0, 8) : 'Walk-in'}
@@ -194,40 +224,87 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
 
       {/* Extend Session Modal */}
       {showExtendModal && selectedSession && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#252525] rounded-2xl p-6 max-w-md w-full border border-[#333333]">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowExtendModal(false)}
+        >
+          <div 
+            className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 max-w-md w-full border border-neutral-700/50 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-[#E5E5E5]">Extend Session</h2>
+              <h2 className="text-xl font-bold text-gray-100">Extend Session</h2>
               <button
                 onClick={() => setShowExtendModal(false)}
-                className="text-[#A0A0A0] hover:text-[#E5E5E5] transition-colors"
+                className="text-gray-400 hover:text-gray-200 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-5 mb-6">
               <div>
-                <p className="text-[#A0A0A0] text-sm mb-2">Station</p>
-                <p className="text-[#E5E5E5] font-semibold">Station {selectedSession.station_id.slice(0, 8)}</p>
+                <p className="text-gray-400 text-sm mb-2">Station</p>
+                <p className="text-gray-100 font-semibold">{selectedSession.station?.name || `Station ${selectedSession.station_id.slice(0, 8)}`}</p>
               </div>
 
               <div>
-                <label className="text-[#A0A0A0] text-sm block mb-2">Additional Time (minutes)</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[15, 30, 60, 120].map((minutes) => (
+                <label className="text-gray-100 text-sm font-medium block mb-3">Additional Time</label>
+                <div className="grid grid-cols-4 gap-3">
+                  {[30, 60, 120, 180].map((minutes) => (
                     <button
                       key={minutes}
                       onClick={() => setExtendMinutes(minutes)}
-                      className={`py-2 rounded-lg font-medium transition-colors ${
+                      className={`p-3 rounded-xl border-2 transition-all duration-300 ${
                         extendMinutes === minutes
-                          ? 'bg-[#ed6802] text-white'
-                          : 'bg-[#2D2D2D] text-[#E5E5E5] hover:bg-[#333333]'
+                          ? 'border-[#ed6802] bg-[#ed6802]/10 scale-105'
+                          : 'border-neutral-700/40 bg-neutral-800/60 hover:border-neutral-600/60 hover:scale-105'
                       }`}
                     >
-                      {minutes}m
+                      <div className="text-center">
+                        <div className="text-gray-100 font-bold">{minutes}m</div>
+                        <div className="text-xs text-[#ed6802] font-semibold mt-1">${calculateExtensionAmount(minutes)}</div>
+                      </div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-100 text-sm font-medium block mb-3">Payment Method</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { value: 'CASH', label: 'Cash', icon: DollarSign },
+                    { value: 'CARD', label: 'Card', icon: CreditCard },
+                    { value: 'ONLINE', label: 'Free', icon: DollarSign }
+                  ].map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => setExtendPaymentMethod(value)}
+                      className={`p-3 rounded-xl border-2 transition-all duration-300 ${
+                        extendPaymentMethod === value
+                          ? 'border-[#ed6802] bg-[#ed6802]/10 scale-105'
+                          : 'border-neutral-700/40 bg-neutral-800/60 hover:border-neutral-600/60 hover:scale-105'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 mx-auto mb-1 ${
+                        value === 'ONLINE' ? 'text-emerald-400' : 'text-gray-400'
+                      }`} />
+                      <div className="text-xs text-gray-100 font-semibold">{label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-neutral-800/40 rounded-xl p-4 border border-neutral-700/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-sm">Total</span>
+                  <span className={`font-bold text-lg ${
+                    extendPaymentMethod === 'ONLINE' ? 'text-emerald-400' : 'text-[#ed6802]'
+                  }`}>
+                    {extendPaymentMethod === 'ONLINE' ? 'FREE' : `$${calculateExtensionAmount(extendMinutes).toFixed(2)}`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -236,14 +313,14 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
               <button
                 onClick={() => setShowExtendModal(false)}
                 disabled={loading}
-                className="flex-1 bg-[#2D2D2D] hover:bg-[#333333] text-[#E5E5E5] py-3 rounded-xl font-medium transition-colors disabled:opacity-50"
+                className="flex-1 px-6 py-3 bg-neutral-800/60 hover:bg-neutral-700/60 text-gray-100 rounded-xl font-semibold transition-all duration-300 hover:scale-105 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExtendSession}
                 disabled={loading}
-                className="flex-1 bg-[#ed6802] hover:bg-[#ff7a1a] text-white py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-[#ed6802] to-[#ff7a1a] hover:from-[#ff7a1a] hover:to-[#ff8c3a] text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#ed6802]/30 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? 'Extending...' : `Extend ${extendMinutes}m`}
               </button>
@@ -254,23 +331,29 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
 
       {/* End Session Modal */}
       {showEndModal && selectedSession && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#252525] rounded-2xl p-6 max-w-md w-full border border-[#333333]">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowEndModal(false)}
+        >
+          <div 
+            className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 max-w-md w-full border border-neutral-700/50 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-[#E5E5E5]">End Session</h2>
+              <h2 className="text-xl font-bold text-gray-100">End Session</h2>
               <button
                 onClick={() => setShowEndModal(false)}
-                className="text-[#A0A0A0] hover:text-[#E5E5E5] transition-colors"
+                className="text-gray-400 hover:text-gray-200 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
-              <p className="text-[#A0A0A0]">Are you sure you want to end this session?</p>
-              <div className="bg-[#2D2D2D] rounded-xl p-4">
-                <p className="text-[#E5E5E5] font-semibold mb-2">Station {selectedSession.station_id.slice(0, 8)}</p>
-                <p className="text-[#A0A0A0] text-sm">Time remaining: {formatDuration(timeRemaining[selectedSession.id] || 0)}</p>
+            <div className="space-y-5 mb-6">
+              <p className="text-gray-300">Are you sure you want to end this session?</p>
+              <div className="bg-neutral-800/40 rounded-xl p-5 border border-neutral-700/40">
+                <p className="text-gray-100 font-semibold mb-2">{selectedSession.station?.name || `Station ${selectedSession.station_id.slice(0, 8)}`}</p>
+                <p className="text-gray-400 text-sm">Time remaining: {formatDuration(timeRemaining[selectedSession.id] || 0)}</p>
               </div>
             </div>
 
@@ -278,14 +361,14 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
               <button
                 onClick={() => setShowEndModal(false)}
                 disabled={loading}
-                className="flex-1 bg-[#2D2D2D] hover:bg-[#333333] text-[#E5E5E5] py-3 rounded-xl font-medium transition-colors disabled:opacity-50"
+                className="flex-1 px-6 py-3 bg-neutral-800/60 hover:bg-neutral-700/60 text-gray-100 rounded-xl font-semibold transition-all duration-300 hover:scale-105 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEndSession}
                 disabled={loading}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? 'Ending...' : 'End Session'}
               </button>

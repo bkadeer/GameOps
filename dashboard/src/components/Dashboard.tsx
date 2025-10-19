@@ -10,10 +10,11 @@ import StatsCards from './StatsCards'
 import AddStationModal from './AddStationModal'
 import StartSessionModal from './StartSessionModal'
 import AmbientClock from './AmbientClock'
+import { StatsCardSkeleton, StationCardSkeleton, SessionsListSkeleton } from './LoadingSkeletons'
 import { useStore } from '@/store/useStore'
 import { stationsAPI, sessionsAPI, dashboardAPI, authAPI } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import type { Station } from '@/types'
+import type { Station, Session } from '@/types'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -34,17 +35,15 @@ export default function Dashboard() {
 
   const handleSessionUpdate = useCallback((data: any) => {
     console.log('Session update received:', data)
-    // Immediately refresh data for real-time updates
-    Promise.all([
-      sessionsAPI.getAll(),
-      dashboardAPI.getStats(),
-      stationsAPI.getAll()
-    ]).then(([sessionsData, statsData, stationsData]) => {
-      setSessions(sessionsData)
-      setStats(statsData)
-      setStations(stationsData)
+    // Reload all sessions to get fresh data with station mapping
+    sessionsAPI.getAll().then(sessionsData => {
+      const sessionsWithStations = sessionsData.map(session => ({
+        ...session,
+        station: stations.find((s: Station) => s.id === session.station_id)
+      }))
+      setSessions(sessionsWithStations)
     }).catch(console.error)
-  }, [setSessions, setStats, setStations])
+  }, [setSessions, stations])
 
   const handleStatsUpdate = useCallback((data: any) => {
     console.log('Stats update received:', data)
@@ -95,8 +94,14 @@ export default function Dashboard() {
           revenue_today: 0
         })),
       ])
+      // Map station data to sessions
+      const sessionsWithStations = sessionsData.map(session => ({
+        ...session,
+        station: stationsData.find(s => s.id === session.station_id)
+      }))
+      
       setStations(stationsData)
-      setSessions(sessionsData)
+      setSessions(sessionsWithStations)
       setStats(statsData)
       setLoading(false)
     } catch (error) {
@@ -138,19 +143,31 @@ export default function Dashboard() {
               <AmbientClock />
               
               {/* WebSocket Status Indicator - Enhanced */}
-              {!isInitializing && isConnected && (
-                <div 
-                  className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
-                >
-                  <div className="relative">
-                    <Wifi className="w-4 h-4 text-emerald-400" />
-                    <div className="absolute inset-0 animate-ping">
-                      <Wifi className="w-4 h-4 text-emerald-400 opacity-40" />
-                    </div>
-                  </div>
-                  <span className="text-xs text-emerald-400 font-semibold tracking-wide">LIVE</span>
+              <div 
+                className={`flex items-center gap-2.5 px-4 py-2 rounded-full border shadow-lg transition-all duration-300 ${
+                  !isInitializing && isConnected 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 shadow-emerald-500/10' 
+                    : 'bg-gray-500/10 border-gray-500/30 shadow-gray-500/10 opacity-50'
+                }`}
+              >
+                <div className="relative">
+                  {!isInitializing && isConnected ? (
+                    <>
+                      <Wifi className="w-4 h-4 text-emerald-400" />
+                      <div className="absolute inset-0 animate-ping">
+                        <Wifi className="w-4 h-4 text-emerald-400 opacity-40" />
+                      </div>
+                    </>
+                  ) : (
+                    <WifiOff className="w-4 h-4 text-gray-400" />
+                  )}
                 </div>
-              )}
+                <span className={`text-xs font-semibold tracking-wide ${
+                  !isInitializing && isConnected ? 'text-emerald-400' : 'text-gray-400'
+                }`}>
+                  {!isInitializing && isConnected ? 'LIVE' : 'OFFLINE'}
+                </span>
+              </div>
 
               {user && (
                 <div className="text-right px-4 py-2 bg-neutral-800/40 rounded-xl border border-neutral-700/50">
@@ -189,7 +206,7 @@ export default function Dashboard() {
           <div className="space-y-6 md:space-y-8">
             {/* Stats Cards */}
             <div className="animate-fade-in">
-              <StatsCards stats={stats} />
+              {!stats ? <StatsCardSkeleton /> : <StatsCards stats={stats} />}
             </div>
 
             {/* Station Grid */}
@@ -207,11 +224,15 @@ export default function Dashboard() {
                   Add Station
                 </button>
               </div>
-              <StationGrid 
-                stations={stations} 
-                onStartSession={handleStartSession}
-                onUpdate={loadData}
-              />
+              {stations.length === 0 ? (
+                <StationCardSkeleton />
+              ) : (
+                <StationGrid 
+                  stations={stations} 
+                  onStartSession={handleStartSession}
+                  onUpdate={loadData}
+                />
+              )}
             </div>
 
             {/* Active Sessions */}
@@ -220,10 +241,14 @@ export default function Dashboard() {
                 <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Active Sessions</h2>
                 <p className="text-sm text-gray-400 mt-1">Currently running gaming sessions</p>
               </div>
-              <SessionsList 
-                sessions={sessions.filter(s => s.status === 'ACTIVE')} 
-                onUpdate={loadData}
-              />
+              {sessions.length === 0 ? (
+                <SessionsListSkeleton />
+              ) : (
+                <SessionsList 
+                  sessions={sessions.filter(s => s.status === 'ACTIVE')} 
+                  onUpdate={loadData}
+                />
+              )}
             </div>
           </div>
         )}

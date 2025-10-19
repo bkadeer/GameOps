@@ -22,6 +22,7 @@ export interface Station {
 export interface Session {
   id: string
   station_id: string
+  station?: Station
   user_id?: string
   started_at: string
   scheduled_end_at: string

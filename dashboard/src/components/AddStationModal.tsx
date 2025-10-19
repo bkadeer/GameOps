@@ -100,8 +100,14 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-fade-in">
-      <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl border border-neutral-700/50 shadow-2xl shadow-black/50 max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
+    <div 
+      className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl border border-neutral-700/50 shadow-2xl shadow-black/50 max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-700/50 bg-gradient-to-r from-neutral-900/50 to-neutral-800/50">
           <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Add New Station</h2>

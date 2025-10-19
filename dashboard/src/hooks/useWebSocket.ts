@@ -17,12 +17,13 @@ interface UseWebSocketOptions {
 
 export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const [isConnected, setIsConnected] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [reconnectAttempts, setReconnectAttempts] = useState(0)
-  const maxReconnectAttempts = 5
-  const reconnectDelay = 3000 // 3 seconds
+  const maxReconnectAttempts = 10
+  const reconnectDelay = 5000 // 5 seconds - increased to reduce reconnection spam
+  const isReconnectingRef = useRef<boolean>(false)
 
   const optionsRef = useRef(options)
   
@@ -31,9 +32,11 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   }, [options])
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN || isReconnectingRef.current) {
       return
     }
+
+    isReconnectingRef.current = true
 
     try {
       const ws = new WebSocket(url)
@@ -43,6 +46,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
         setIsConnected(true)
         setIsInitializing(false)
         setReconnectAttempts(0)
+        isReconnectingRef.current = false
         optionsRef.current.onConnect?.()
       }
 
@@ -77,24 +81,26 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
         console.debug('WebSocket URL:', url)
         console.debug('WebSocket readyState:', ws.readyState)
         setIsInitializing(false)
+        isReconnectingRef.current = false
         optionsRef.current.onError?.(error)
       }
 
-      ws.onclose = () => {
-        console.log('🔌 WebSocket disconnected')
+      ws.onclose = (event) => {
+        console.log('🔌 WebSocket disconnected', event.code, event.reason)
         setIsConnected(false)
         setIsInitializing(false)
+        isReconnectingRef.current = false
         optionsRef.current.onDisconnect?.()
         wsRef.current = null
 
-        // Attempt to reconnect
-        if (reconnectAttempts < maxReconnectAttempts) {
+        // Only reconnect if it wasn't a normal closure and we haven't exceeded max attempts
+        if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
           console.log(`🔄 Reconnecting in ${reconnectDelay/1000}s... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`)
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1)
             connect()
           }, reconnectDelay)
-        } else {
+        } else if (reconnectAttempts >= maxReconnectAttempts) {
           console.error('❌ Max reconnection attempts reached')
         }
       }
@@ -103,6 +109,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     } catch (error) {
       console.error('Error creating WebSocket:', error)
       setIsInitializing(false)
+      isReconnectingRef.current = false
     }
   }, [url, reconnectAttempts])
 
