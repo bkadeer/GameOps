@@ -9,6 +9,7 @@ import SessionsList from './SessionsList'
 import StatsCards from './StatsCards'
 import AddStationModal from './AddStationModal'
 import StartSessionModal from './StartSessionModal'
+import AmbientClock from './AmbientClock'
 import { useStore } from '@/store/useStore'
 import { stationsAPI, sessionsAPI, dashboardAPI, authAPI } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -117,55 +118,67 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1C1C1C]">
-      {/* Top Navigation */}
-      <nav className="bg-[#252525] border-b border-[#333333] sticky top-0 z-50">
-        <div className="max-w-[1920px] mx-auto px-6 py-4">
+    <div className="min-h-screen bg-neutral-950">
+      {/* Top Navigation - Enhanced with glassmorphism */}
+      <nav className="bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-800/50 sticky top-0 z-50 shadow-lg shadow-black/20">
+        <div className="max-w-[1920px] mx-auto px-8 py-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#ed6802] to-[#ff7a1a] rounded-xl flex items-center justify-center">
-                <Gamepad2 className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#ed6802] via-[#ff7a1a] to-[#ff8c3a] rounded-2xl flex items-center justify-center shadow-lg shadow-[#ed6802]/30 ring-2 ring-[#ed6802]/20">
+                <Gamepad2 className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-[#E5E5E5]">GameOps</h1>
-                <p className="text-xs text-[#A0A0A0]">Station Management</p>
+                <h1 className="text-xl font-bold text-gray-100 tracking-tight">GameOps</h1>
+                <p className="text-xs text-gray-400 font-medium">Station Management System</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* WebSocket Status Indicator */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#2D2D2D]">
+            <div className="flex items-center gap-5">
+              {/* Ambient Clock */}
+              <AmbientClock />
+              
+              {/* WebSocket Status Indicator - Enhanced */}
+              <div className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all duration-300 ${
+                isConnected 
+                  ? 'bg-emerald-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' 
+                  : 'bg-neutral-800/60 border border-neutral-700/50'
+              }`}>
                 {isConnected ? (
                   <>
-                    <Wifi className="w-4 h-4 text-green-500" />
-                    <span className="text-xs text-green-500 font-medium">Live</span>
+                    <div className="relative">
+                      <Wifi className="w-4 h-4 text-emerald-400" />
+                      <div className="absolute inset-0 animate-ping">
+                        <Wifi className="w-4 h-4 text-emerald-400 opacity-40" />
+                      </div>
+                    </div>
+                    <span className="text-xs text-emerald-400 font-semibold tracking-wide">LIVE</span>
                   </>
                 ) : (
                   <>
                     <WifiOff className="w-4 h-4 text-gray-500" />
-                    <span className="text-xs text-gray-500 font-medium">Offline</span>
+                    <span className="text-xs text-gray-500 font-semibold tracking-wide">OFFLINE</span>
                   </>
                 )}
               </div>
 
               {user && (
-                <div className="text-right mr-2">
-                  <p className="text-sm text-[#E5E5E5] font-medium">{user.username}</p>
-                  <p className="text-xs text-[#A0A0A0]">{user.role}</p>
+                <div className="text-right px-4 py-2 bg-neutral-800/40 rounded-xl border border-neutral-700/50">
+                  <p className="text-sm text-gray-200 font-semibold tracking-tight">{user.username}</p>
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">{user.role}</p>
                 </div>
               )}
               <button 
-                className="p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors"
+                className="p-2.5 hover:bg-neutral-800/60 rounded-xl transition-all duration-300 hover:scale-105 border border-transparent hover:border-neutral-700/50"
                 title="Settings"
               >
-                <Settings className="w-5 h-5 text-[#A0A0A0]" />
+                <Settings className="w-5 h-5 text-gray-400 hover:text-gray-300 transition-colors" />
               </button>
               <button 
                 onClick={handleLogout}
-                className="p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors group"
+                className="p-2.5 hover:bg-red-500/10 rounded-xl transition-all duration-300 hover:scale-105 border border-transparent hover:border-red-500/30 group"
                 title="Logout"
               >
-                <LogOut className="w-5 h-5 text-[#A0A0A0] group-hover:text-red-400 transition-colors" />
+                <LogOut className="w-5 h-5 text-gray-400 group-hover:text-red-400 transition-colors" />
               </button>
             </div>
           </div>
@@ -173,23 +186,31 @@ export default function Dashboard() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-[1920px] mx-auto px-6 py-8">
+      <main className="max-w-[95%] mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-10">
         {loading ? (
           <div className="flex items-center justify-center h-[60vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ed6802]"></div>
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#ed6802]"></div>
+              <div className="absolute inset-0 animate-ping rounded-full h-16 w-16 border-t-2 border-b-2 border-[#ed6802] opacity-20"></div>
+            </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 md:space-y-8">
             {/* Stats Cards */}
-            <StatsCards stats={stats} />
+            <div className="animate-fade-in">
+              <StatsCards stats={stats} />
+            </div>
 
             {/* Station Grid */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[#E5E5E5]">Gaming Stations</h2>
+            <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Gaming Stations</h2>
+                  <p className="text-sm text-gray-400 mt-1">Manage and monitor all stations</p>
+                </div>
                 <button
                   onClick={() => setShowAddStation(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#ed6802] hover:bg-[#ff7a1a] text-white rounded-lg font-medium transition-colors"
+                  className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-[#ed6802] to-[#ff7a1a] hover:from-[#ff7a1a] hover:to-[#ff8c3a] text-white rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#ed6802]/30 border border-[#ff7a1a]/20"
                 >
                   <Plus className="w-4 h-4" />
                   Add Station
@@ -203,8 +224,11 @@ export default function Dashboard() {
             </div>
 
             {/* Active Sessions */}
-            <div>
-              <h2 className="text-lg font-semibold text-[#E5E5E5] mb-4">Active Sessions</h2>
+            <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Active Sessions</h2>
+                <p className="text-sm text-gray-400 mt-1">Currently running gaming sessions</p>
+              </div>
               <SessionsList 
                 sessions={sessions.filter(s => s.status === 'ACTIVE')} 
                 onUpdate={loadData}

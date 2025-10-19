@@ -39,22 +39,31 @@ export default function StatsCards({ stats }: StatsCardsProps) {
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {cards.map((card) => {
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {cards.map((card, index) => {
         const Icon = card.icon
         return (
           <div
             key={card.title}
-            className="bg-[#252525] rounded-2xl p-6 border border-[#333333] hover:border-[#ed6802]/50 transition-all duration-300 group"
+            className="relative bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-4 sm:p-5 md:p-6 border border-neutral-700/50 hover:border-neutral-600/80 transition-all duration-300 group overflow-hidden hover:scale-[1.02] hover:shadow-xl hover:shadow-black/30 shadow-inner shadow-black/20"
+            style={{ animationDelay: `${index * 50}ms` }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center`}>
-                <Icon className="w-6 h-6 text-white" />
+            {/* Gradient accent line */}
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${card.color} opacity-60 group-hover:opacity-100 transition-opacity`}></div>
+            
+            {/* Subtle glow effect */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-5 md:mb-6">
+                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br ${card.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 ring-2 ring-white/10`}>
+                  <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                </div>
               </div>
-            </div>
-            <div>
-              <p className="text-[#A0A0A0] text-sm mb-1">{card.title}</p>
-              <p className="text-[#E5E5E5] text-3xl font-semibold">{card.value}</p>
+              <div>
+                <p className="text-gray-400 text-xs sm:text-sm font-medium mb-2 tracking-wide uppercase leading-snug">{card.title}</p>
+                <p className="text-gray-100 text-3xl md:text-4xl font-bold tracking-tight leading-snug">{card.value}</p>
+              </div>
             </div>
           </div>
         )

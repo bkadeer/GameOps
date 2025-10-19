@@ -100,34 +100,34 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#252525] rounded-2xl border border-[#333333] max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-fade-in">
+      <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl border border-neutral-700/50 shadow-2xl shadow-black/50 max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#333333]">
-          <h2 className="text-xl font-semibold text-[#E5E5E5]">Add New Station</h2>
+        <div className="flex items-center justify-between p-6 border-b border-neutral-700/50 bg-gradient-to-r from-neutral-900/50 to-neutral-800/50">
+          <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Add New Station</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[#2D2D2D] rounded-lg transition-colors"
+            className="p-2 hover:bg-neutral-800 rounded-xl transition-all duration-300 hover:scale-110 group"
           >
-            <X className="w-5 h-5 text-[#A0A0A0]" />
+            <X className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-gradient-to-br from-neutral-900/40 to-neutral-800/40">
           {error && (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
 
-          <div className="text-xs text-[#A0A0A0] flex items-center gap-1">
-            <span className="text-[#ed6802]">*</span> Required fields
+          <div className="text-xs text-gray-400 flex items-center gap-1.5 bg-neutral-800/50 px-3 py-2 rounded-lg border border-neutral-700/30">
+            <span className="text-[#ed6802] font-bold">*</span> Required fields
           </div>
 
           {/* Station Type */}
           <div>
-            <label className="block text-sm font-medium text-[#E5E5E5] mb-3">
+            <label className="block text-sm font-semibold text-gray-100 mb-3 tracking-tight">
               Station Type
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -136,19 +136,23 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
                   key={type}
                   type="button"
                   onClick={() => setFormData({ ...formData, station_type: type })}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                     formData.station_type === type
-                      ? 'border-[#ed6802] bg-[#ed6802]/10'
-                      : 'border-[#333333] bg-[#2D2D2D] hover:border-[#444444]'
+                      ? 'border-[#ed6802] bg-[#ed6802]/10 shadow-lg shadow-[#ed6802]/20 scale-105'
+                      : 'border-neutral-700/50 bg-neutral-800/50 hover:border-neutral-600 hover:bg-neutral-800'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3" >
                     {type === 'PC' ? (
-                      <Monitor className="w-5 h-5 text-[#A0A0A0]" />
+                      <Monitor className={`w-5 h-5 transition-colors ${
+                        formData.station_type === type ? 'text-[#ed6802]' : 'text-gray-400'
+                      }`} />
                     ) : (
-                      <Gamepad2 className="w-5 h-5 text-[#A0A0A0]" />
+                      <Gamepad2 className={`w-5 h-5 transition-colors ${
+                        formData.station_type === type ? 'text-[#ed6802]' : 'text-gray-400'
+                      }`} />
                     )}
-                    <span className="text-[#E5E5E5] font-medium">{type}</span>
+                    <span className="text-gray-100 font-semibold">{type}</span>
                   </div>
                 </button>
               ))}
@@ -158,7 +162,7 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
+              <label className="block text-sm font-semibold text-gray-100 mb-2 tracking-tight">
                 Station Name *
               </label>
               <input
@@ -166,12 +170,13 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-[#ed6802] placeholder:text-gray-500 focus:outline-none focus:border-[#ed6802] focus:ring-2 focus:ring-[#ed6802]/20 transition-all"
                 placeholder="e.g., PC-01"
+                style={{ textIndent: "0.3em" }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
+              <label className="block text-sm font-semibold text-gray-100 mb-2 tracking-tight">
                 Location *
               </label>
               <input
@@ -179,8 +184,9 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
                 required
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-[#ed6802] placeholder:text-gray-500 focus:outline-none focus:border-[#ed6802] focus:ring-2 focus:ring-[#ed6802]/20 transition-all"
                 placeholder="e.g., Floor 1, Row A"
+                style={{ textIndent: "0.3em" }}
               />
             </div>
           </div>
@@ -188,27 +194,29 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
           {/* Network Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
+              <label className="block text-sm font-semibold text-gray-100 mb-2 tracking-tight">
                 IP Address
               </label>
               <input
                 type="text"
                 value={formData.ip_address}
                 onChange={(e) => setFormData({ ...formData, ip_address: e.target.value })}
-                className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-[#ed6802] placeholder:text-gray-500 focus:outline-none focus:border-[#ed6802] focus:ring-2 focus:ring-[#ed6802]/20 transition-all"
                 placeholder="192.168.1.100"
+                style={{ textIndent: "0.3em" }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#E5E5E5] mb-2">
+              <label className="block text-sm font-semibold text-gray-100 mb-2 tracking-tight">
                 MAC Address
               </label>
               <input
                 type="text"
                 value={formData.mac_address}
                 onChange={(e) => setFormData({ ...formData, mac_address: e.target.value })}
-                className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-[#ed6802] placeholder:text-gray-500 focus:outline-none focus:border-[#ed6802] focus:ring-2 focus:ring-[#ed6802]/20 transition-all"
                 placeholder="00:00:00:00:00:00"
+                style={{ textIndent: "0.3em" }}
               />
             </div>
           </div>
@@ -216,7 +224,7 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
           {/* Specs (for PC only) */}
           {formData.station_type === 'PC' && (
             <div>
-              <label className="block text-sm font-medium text-[#E5E5E5] mb-3">
+              <label className="block text-sm font-semibold text-gray-100 mb-3 tracking-tight">
                 Specifications (Optional)
               </label>
               <div className="grid grid-cols-3 gap-4">
@@ -228,8 +236,9 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
                       ...formData, 
                       specs: { ...formData.specs, cpu: e.target.value }
                     })}
-                    className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                    className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-[#ed6802] placeholder:text-gray-500 focus:outline-none focus:border-[#ed6802] focus:ring-2 focus:ring-[#ed6802]/20 transition-all"
                     placeholder="CPU"
+                    style={{ textIndent: "0.5em" }}
                   />
                 </div>
                 <div>
@@ -240,8 +249,9 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
                       ...formData, 
                       specs: { ...formData.specs, gpu: e.target.value }
                     })}
-                    className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                    className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-[#ed6802] placeholder:text-gray-500 focus:outline-none focus:border-[#ed6802] focus:ring-2 focus:ring-[#ed6802]/20 transition-all"
                     placeholder="GPU"
+                    style={{ textIndent: "0.5em" }}
                   />
                 </div>
                 <div>
@@ -252,8 +262,9 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
                       ...formData, 
                       specs: { ...formData.specs, ram_gb: e.target.value }
                     })}
-                    className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                    className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-xl text-[#ed6802] placeholder:text-gray-500 focus:outline-none focus:border-[#ed6802] focus:ring-2 focus:ring-[#ed6802]/20 transition-all"
                     placeholder="RAM (GB)"
+                    style={{ textIndent: "0.5em" }}
                   />
                 </div>
               </div>
@@ -261,18 +272,18 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4 border-t border-neutral-700/30 mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-[#2D2D2D] hover:bg-[#333333] text-[#E5E5E5] rounded-lg font-medium transition-colors"
+              className="flex-1 px-6 py-3 bg-neutral-800/70 hover:bg-neutral-700 text-gray-200 rounded-xl font-semibold transition-all duration-300 hover:scale-105 border border-neutral-700/50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-[#ed6802] hover:bg-[#ff7a1a] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#ed6802] to-[#ff7a1a] hover:from-[#ff7a1a] hover:to-[#ff8c3a] text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#ed6802]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? 'Creating...' : 'Create Station'}
             </button>

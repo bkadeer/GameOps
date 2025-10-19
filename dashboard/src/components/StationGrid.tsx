@@ -1,6 +1,6 @@
 'use client'
 
-import { Monitor, Gamepad2, Circle, Play, Edit2, Trash2 } from 'lucide-react'
+import { Monitor, Gamepad2, Circle, Play, Edit2, Trash2, Cpu, MemoryStick } from 'lucide-react'
 import type { Station } from '@/types'
 import { useState } from 'react'
 import { stationsAPI } from '@/lib/api'
@@ -40,9 +40,9 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ONLINE':
-        return 'text-green-500'
+        return 'text-emerald-500'
       case 'IN_SESSION':
-        return 'text-[#ed6802]'
+        return 'text-cyan-500'
       case 'OFFLINE':
         return 'text-gray-500'
       case 'MAINTENANCE':
@@ -55,9 +55,9 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
   const getStatusBg = (status: string) => {
     switch (status) {
       case 'ONLINE':
-        return 'bg-green-500/10 border-green-500/30'
+        return 'bg-emerald-500/10 border-emerald-500/30'
       case 'IN_SESSION':
-        return 'bg-[#ed6802]/10 border-[#ed6802]/30'
+        return 'bg-cyan-500/10 border-cyan-500/30'
       case 'OFFLINE':
         return 'bg-gray-500/10 border-gray-500/30'
       case 'MAINTENANCE':
@@ -76,26 +76,51 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
     }
   }
 
+  // Sort stations by name to maintain consistent order
+  const sortedStations = [...stations].sort((a, b) => a.name.localeCompare(b.name))
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {stations.map((station) => {
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+      {sortedStations.map((station) => {
         const Icon = getIcon(station.station_type)
         // Can edit any station except those in active session
         const canEdit = station.status !== 'IN_SESSION'
         // Can only delete OFFLINE or MAINTENANCE stations
         const canDelete = station.status === 'OFFLINE' || station.status === 'MAINTENANCE'
+        
+        // Determine card styling based on status
+        const isOnline = station.status === 'ONLINE'
+        const isInSession = station.status === 'IN_SESSION'
+        const isMaintenance = station.status === 'MAINTENANCE'
+        const cardBg = isOnline 
+          ? 'bg-gradient-to-br from-emerald-950/40 to-neutral-900' 
+          : isInSession
+          ? 'bg-gradient-to-br from-cyan-950/40 to-neutral-900'
+          : isMaintenance
+          ? 'bg-gradient-to-br from-yellow-950/40 to-neutral-900'
+          : 'bg-gradient-to-br from-neutral-900 to-neutral-800/60'
+        const cardBorder = isOnline
+          ? 'border-emerald-500/30 hover:border-emerald-500/50'
+          : isInSession
+          ? 'border-cyan-500/30 hover:border-cyan-500/50'
+          : isMaintenance
+          ? 'border-yellow-500/30 hover:border-yellow-500/50'
+          : 'border-neutral-700/40 hover:border-neutral-600/60'
+        
         return (
           <div
             key={station.id}
-            className="bg-[#252525] rounded-2xl p-8 border border-[#333333] hover:border-[#ed6802]/50 transition-all duration-300 group relative"
+            className={`${cardBg} ${cardBorder} rounded-2xl p-4 sm:p-5 md:p-6 border transition-all duration-300 group relative hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/40 overflow-hidden shadow-inner shadow-black/20 ${
+              isOnline ? 'shadow-[0_0_12px_1px_rgba(34,197,94,0.2)]' : ''
+            }`}
           >
             {/* Action Buttons */}
             {(canEdit || canDelete) && (
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-3 right-3 md:top-4 md:right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                 {canEdit && (
                   <button
                     onClick={() => setEditStation(station)}
-                    className="p-2 bg-[#2D2D2D] hover:bg-[#ed6802] text-[#A0A0A0] hover:text-white rounded-lg transition-colors"
+                    className="p-2.5 bg-neutral-800/90 backdrop-blur-sm hover:bg-[#ed6802] text-gray-400 hover:text-white rounded-xl transition-all duration-300 hover:scale-110 border border-neutral-700/50 hover:border-[#ed6802]/50 shadow-lg"
                     title="Edit Station"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -104,7 +129,7 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
                 {canDelete && (
                   <button
                     onClick={() => setDeleteConfirm(station.id)}
-                    className="p-2 bg-[#2D2D2D] hover:bg-red-500 text-[#A0A0A0] hover:text-white rounded-lg transition-colors"
+                    className="p-2.5 bg-neutral-800/90 backdrop-blur-sm hover:bg-red-500 text-gray-400 hover:text-white rounded-xl transition-all duration-300 hover:scale-110 border border-neutral-700/50 hover:border-red-500/50 shadow-lg"
                     title="Delete Station"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -112,57 +137,139 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
                 )}
               </div>
             )}
-            <div className="flex items-start justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-[#2D2D2D] rounded-xl flex items-center justify-center group-hover:bg-[#ed6802]/10 transition-colors">
-                  <Icon className="w-7 h-7 text-[#A0A0A0] group-hover:text-[#ed6802] transition-colors" />
+            
+            {/* Running light effect for IN_SESSION - around entire border */}
+            {isInSession && (
+              <svg
+                className="absolute inset-0 pointer-events-none"
+                style={{ width: '100%', height: '100%' }}
+              >
+                <defs>
+                  <linearGradient id={`borderGradient-${station.id}`}>
+                    <stop offset="0%" stopColor="transparent" />
+                    <stop offset="40%" stopColor="transparent" />
+                    <stop offset="50%" stopColor="rgb(6, 182, 212)" stopOpacity="0.8" />
+                    <stop offset="60%" stopColor="transparent" />
+                    <stop offset="100%" stopColor="transparent" />
+                  </linearGradient>
+                </defs>
+                <rect
+                  x="1"
+                  y="1"
+                  rx="16"
+                  ry="16"
+                  fill="none"
+                  stroke={`url(#borderGradient-${station.id})`}
+                  strokeWidth="2"
+                  strokeDasharray="100 700"
+                  strokeDashoffset="0"
+                  pathLength="800"
+                  style={{
+                    width: 'calc(100% - 2px)',
+                    height: 'calc(100% - 2px)',
+                    animation: 'borderRotate 3s linear infinite'
+                  }}
+                />
+              </svg>
+            )}
+            
+            {/* Subtle glow effect for online stations */}
+            {isOnline && (
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            )}
+            
+            {/* Subtle glow effect for in-session stations */}
+            {isInSession && (
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            )}
+            
+            {/* Subtle glow effect for maintenance stations */}
+            {isMaintenance && (
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            )}
+            
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    isOnline 
+                      ? 'bg-emerald-500/10 ring-2 ring-emerald-500/20 group-hover:ring-emerald-500/40' 
+                      : isInSession
+                      ? 'bg-cyan-500/10 ring-2 ring-cyan-500/20 group-hover:ring-cyan-500/40'
+                      : isMaintenance
+                      ? 'bg-yellow-500/10 ring-2 ring-yellow-500/20 group-hover:ring-yellow-500/40'
+                      : 'bg-neutral-800/60 ring-2 ring-neutral-700/30'
+                  }`}>
+                    <Icon className={`w-7 h-7 transition-colors ${
+                      isOnline 
+                        ? 'text-emerald-400' 
+                        : isInSession
+                        ? 'text-cyan-400'
+                        : isMaintenance
+                        ? 'text-yellow-400'
+                        : 'text-gray-500'
+                    }`} />
+                  </div>
+                  <div>
+                    <h3 className="text-gray-100 font-bold text-lg tracking-tight">{station.name}</h3>
+                    <p className="text-gray-400 text-sm font-medium">{station.station_type}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-[#E5E5E5] font-bold text-lg tracking-wide">{station.name}</h3>
-                  <p className="text-[#A0A0A0] text-sm font-medium tracking-wide">{station.station_type}</p>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${getStatusBg(station.status)}`}>
+                  <Circle className={`w-2 h-2 fill-current ${getStatusColor(station.status)} ${
+                    isOnline || isInSession ? 'animate-[blink_1.8s_ease-in-out_infinite]' : ''
+                  }`} />
+                  <span className={`text-xs font-bold uppercase tracking-wider ${getStatusColor(station.status)}`}>
+                    {station.status.replace('_', ' ')}
+                  </span>
                 </div>
               </div>
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${getStatusBg(station.status)}`}>
-                <Circle className={`w-2.5 h-2.5 fill-current ${getStatusColor(station.status)}`} />
-                <span className={`text-xs font-bold uppercase tracking-wider ${getStatusColor(station.status)}`}>
-                  {station.status}
-                </span>
-              </div>
-            </div>
 
-            {/* Specs Section with Enhanced Padding */}
-            <div className="space-y-4 px-8 py-6 bg-[#1C1C1C] rounded-2xl border-2 border-[#2a2a2a]">
-              <div className="flex items-center justify-between text-base gap-6">
-                <span className="text-[#A0A0A0] flex-shrink-0 font-semibold tracking-wide">Location</span>
-                <span className="text-[#E5E5E5] text-right truncate font-medium tracking-wide">{station.location}</span>
+              {/* Specs Section with Icons */}
+              <div className="space-y-3 p-5 bg-neutral-950/50 backdrop-blur-sm rounded-xl border border-neutral-800/50">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400 flex items-center gap-2 font-medium">
+                    <Monitor className="w-4 h-4" />
+                    Location
+                  </span>
+                  <span className="text-gray-200 text-right truncate font-semibold">{station.location}</span>
+                </div>
+                {station.specs && (
+                  <>
+                    {station.specs.cpu && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400 flex items-center gap-2 font-medium">
+                          <Cpu className="w-4 h-4" />
+                          CPU
+                        </span>
+                        <span className="text-gray-200 text-right truncate font-semibold text-xs">{station.specs.cpu}</span>
+                      </div>
+                    )}
+                    {station.specs.ram_gb && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400 flex items-center gap-2 font-medium">
+                          <MemoryStick className="w-4 h-4" />
+                          RAM
+                        </span>
+                        <span className="text-gray-200 text-right font-semibold">{station.specs.ram_gb}GB</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-              {station.specs && (
-                <>
-                  {station.specs.cpu && (
-                    <div className="flex items-center justify-between text-base gap-6">
-                      <span className="text-[#A0A0A0] flex-shrink-0 font-semibold tracking-wide">CPU</span>
-                      <span className="text-[#E5E5E5] text-sm text-right truncate font-medium tracking-wide">{station.specs.cpu}</span>
-                    </div>
-                  )}
-                  {station.specs.ram_gb && (
-                    <div className="flex items-center justify-between text-base gap-6">
-                      <span className="text-[#A0A0A0] flex-shrink-0 font-semibold tracking-wide">RAM</span>
-                      <span className="text-[#E5E5E5] text-right font-medium tracking-wide">{station.specs.ram_gb}GB</span>
-                    </div>
-                  )}
-                </>
+
+              {station.status === 'ONLINE' && (
+                <div className="flex justify-center mt-4 md:mt-5">
+                  <button 
+                    onClick={() => onStartSession(station)}
+                    className="w-2/3 bg-gradient-to-r from-[#ed6802] to-[#ff7a1a] hover:from-[#ff7a1a] hover:to-[#ff8c3a] text-white py-2.5 rounded-full font-semibold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#ed6802]/30 border border-[#ff7a1a]/20"
+                  >
+                    <Play className="w-4 h-4" />
+                    Start Session
+                  </button>
+                </div>
               )}
             </div>
-
-            {station.status === 'ONLINE' && (
-              <button 
-                onClick={() => onStartSession(station)}
-                className="w-full mt-4 bg-[#ed6802] hover:bg-[#ff7a1a] text-white py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <Play className="w-4 h-4" />
-                Start Session
-              </button>
-            )}
           </div>
         )
       })}

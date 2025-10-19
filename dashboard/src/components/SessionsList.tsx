@@ -95,15 +95,15 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
 
   if (sessions.length === 0) {
     return (
-      <div className="bg-[#252525] rounded-2xl p-12 border border-[#333333] text-center">
-        <Monitor className="w-12 h-12 text-[#A0A0A0] mx-auto mb-4" />
-        <p className="text-[#A0A0A0]">No active sessions</p>
+      <div className="relative bg-gradient-to-br from-neutral-900/60 to-neutral-800/50 backdrop-blur-md rounded-2xl p-12 border border-neutral-700/50 text-center shadow-inner shadow-black/20">
+        <Monitor className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-400">No active sessions</p>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
       {sessions.map((session) => {
         const remaining = timeRemaining[session.id] || 0
         const isExpiringSoon = remaining < 300 // Less than 5 minutes
@@ -111,44 +111,58 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
         return (
           <div
             key={session.id}
-            className={`bg-[#252525] rounded-2xl p-5 border transition-all duration-300 ${
-              isExpiringSoon ? 'border-yellow-500/50' : 'border-[#333333] hover:border-[#ed6802]/50'
+            className={`relative bg-gradient-to-br from-neutral-900/60 to-neutral-800/50 backdrop-blur-md rounded-2xl p-4 sm:p-5 md:p-6 border transition-all duration-300 shadow-inner shadow-black/20 group ${
+              isExpiringSoon 
+                ? 'border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.1)]' 
+                : 'border-cyan-500/50 hover:border-cyan-400/60 hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]'
             }`}
           >
-            <div className="flex items-start justify-between mb-4">
+            {/* Subtle glow effect on hover */}
+            {isExpiringSoon ? (
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+            )}
+            
+            <div className="relative z-10">
+            <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#ed6802]/10 rounded-xl flex items-center justify-center">
-                  <Monitor className="w-5 h-5 text-[#ed6802]" />
+                <div className="w-11 h-11 bg-cyan-500/10 rounded-xl flex items-center justify-center ring-2 ring-cyan-500/20">
+                  <Monitor className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-[#E5E5E5] font-semibold">Station {session.station_id.slice(0, 8)}</h3>
-                  <p className="text-[#A0A0A0] text-sm flex items-center gap-1">
-                    <User className="w-3 h-3" />
+                  <h3 className="text-gray-100 font-bold tracking-tight">Station {session.station_id.slice(0, 8)}</h3>
+                  <p className="text-gray-400 text-sm flex items-center gap-1.5 font-medium">
+                    <User className="w-3.5 h-3.5" />
                     {session.user_id ? session.user_id.slice(0, 8) : 'Walk-in'}
                   </p>
                 </div>
               </div>
-              <div className={`px-3 py-1.5 rounded-full ${isExpiringSoon ? 'bg-yellow-500/10' : 'bg-green-500/10'}`}>
-                <span className={`text-xs font-medium ${isExpiringSoon ? 'text-yellow-500' : 'text-green-500'}`}>
+              <div className={`px-3 py-1.5 rounded-full border ${isExpiringSoon ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-cyan-500/10 border-cyan-500/30'}`}>
+                <span className={`text-xs font-bold uppercase tracking-wider ${isExpiringSoon ? 'text-yellow-400' : 'text-cyan-400'}`}>
                   {session.status}
                 </span>
               </div>
             </div>
 
-            <div className="space-y-3 mb-4">
+            <div className="space-y-3 mb-5">
               <div className="flex items-center justify-between">
-                <span className="text-[#A0A0A0] text-sm flex items-center gap-2">
+                <span className="text-gray-400 text-sm flex items-center gap-2 font-medium">
                   <Clock className="w-4 h-4" />
                   Time Remaining
                 </span>
-                <span className={`font-semibold ${isExpiringSoon ? 'text-yellow-500' : 'text-[#E5E5E5]'}`}>
+                <span className={`font-mono text-lg tracking-wider font-bold ${
+                  isExpiringSoon ? 'text-yellow-400' : 'text-cyan-400'
+                }`}>
                   {formatDuration(remaining)}
                 </span>
               </div>
-              <div className="w-full bg-[#1C1C1C] rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-neutral-700 rounded-full h-1.5 overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-1000 ${
-                    isExpiringSoon ? 'bg-yellow-500' : 'bg-[#ed6802]'
+                  className={`h-1.5 rounded-full transition-all duration-1000 ${
+                    isExpiringSoon 
+                      ? 'bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-300 animate-pulse' 
+                      : 'bg-gradient-to-r from-cyan-500 via-cyan-400 to-cyan-300 animate-[pulse_2s_infinite]'
                   }`}
                   style={{
                     width: `${Math.max(0, Math.min(100, (remaining / (session.duration_minutes * 60)) * 100))}%`,
@@ -157,21 +171,22 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button 
                 onClick={() => handleExtendClick(session)}
-                className="flex-1 bg-[#2D2D2D] hover:bg-[#ed6802] text-[#E5E5E5] py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 rounded-full px-5 py-2 text-sm bg-neutral-800/70 hover:bg-cyan-500/90 text-gray-200 hover:text-white font-semibold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105 hover:-translate-y-0.5 hover:shadow-lg border border-neutral-700/50 hover:border-cyan-500/50"
               >
                 <Plus className="w-4 h-4" />
                 Extend
               </button>
               <button 
                 onClick={() => handleEndClick(session)}
-                className="flex-1 bg-[#2D2D2D] hover:bg-red-500 text-[#E5E5E5] py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 rounded-full px-5 py-2 text-sm bg-neutral-800/70 hover:bg-red-500/90 text-gray-200 hover:text-white font-semibold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105 hover:-translate-y-0.5 hover:shadow-lg border border-neutral-700/50 hover:border-red-500/50"
               >
                 <StopCircle className="w-4 h-4" />
                 End
               </button>
+            </div>
             </div>
           </div>
         )
