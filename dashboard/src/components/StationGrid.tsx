@@ -138,39 +138,20 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
               </div>
             )}
             
-            {/* Running light effect for IN_SESSION - around entire border */}
+            {/* Top glow effect for IN_SESSION */}
             {isInSession && (
-              <svg
-                className="absolute inset-0 pointer-events-none"
-                style={{ width: '100%', height: '100%' }}
+              <div 
+                className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden rounded-t-2xl"
+                style={{ zIndex: 5 }}
               >
-                <defs>
-                  <linearGradient id={`borderGradient-${station.id}`}>
-                    <stop offset="0%" stopColor="transparent" />
-                    <stop offset="40%" stopColor="transparent" />
-                    <stop offset="50%" stopColor="rgb(6, 182, 212)" stopOpacity="0.8" />
-                    <stop offset="60%" stopColor="transparent" />
-                    <stop offset="100%" stopColor="transparent" />
-                  </linearGradient>
-                </defs>
-                <rect
-                  x="1"
-                  y="1"
-                  rx="16"
-                  ry="16"
-                  fill="none"
-                  stroke={`url(#borderGradient-${station.id})`}
-                  strokeWidth="2"
-                  strokeDasharray="100 700"
-                  strokeDashoffset="0"
-                  pathLength="800"
+                <div 
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
                   style={{
-                    width: 'calc(100% - 2px)',
-                    height: 'calc(100% - 2px)',
-                    animation: 'borderRotate 3s linear infinite'
+                    animation: 'shimmer 2s linear infinite',
+                    backgroundSize: '200% 100%'
                   }}
                 />
-              </svg>
+              </div>
             )}
             
             {/* Subtle glow effect for online stations */}
