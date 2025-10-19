@@ -19,9 +19,16 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const [isConnected, setIsConnected] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
   const [reconnectAttempts, setReconnectAttempts] = useState(0)
   const maxReconnectAttempts = 5
   const reconnectDelay = 3000 // 3 seconds
+
+  const optionsRef = useRef(options)
+  
+  useEffect(() => {
+    optionsRef.current = options
+  }, [options])
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -34,8 +41,9 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
       ws.onopen = () => {
         console.log('✅ WebSocket connected')
         setIsConnected(true)
+        setIsInitializing(false)
         setReconnectAttempts(0)
-        options.onConnect?.()
+        optionsRef.current.onConnect?.()
       }
 
       ws.onmessage = (event) => {
@@ -45,13 +53,13 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
 
           switch (message.type) {
             case 'station_update':
-              options.onStationUpdate?.(message.data)
+              optionsRef.current.onStationUpdate?.(message.data)
               break
             case 'session_update':
-              options.onSessionUpdate?.(message.data)
+              optionsRef.current.onSessionUpdate?.(message.data)
               break
             case 'stats_update':
-              options.onStatsUpdate?.(message.data)
+              optionsRef.current.onStatsUpdate?.(message.data)
               break
             case 'server_shutdown':
               console.warn('⚠️ Server is shutting down')
@@ -68,13 +76,15 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
         console.warn('⚠️ WebSocket connection failed (real-time updates disabled)')
         console.debug('WebSocket URL:', url)
         console.debug('WebSocket readyState:', ws.readyState)
-        options.onError?.(error)
+        setIsInitializing(false)
+        optionsRef.current.onError?.(error)
       }
 
       ws.onclose = () => {
         console.log('🔌 WebSocket disconnected')
         setIsConnected(false)
-        options.onDisconnect?.()
+        setIsInitializing(false)
+        optionsRef.current.onDisconnect?.()
         wsRef.current = null
 
         // Attempt to reconnect
@@ -92,8 +102,9 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
       wsRef.current = ws
     } catch (error) {
       console.error('Error creating WebSocket:', error)
+      setIsInitializing(false)
     }
-  }, [url, options, reconnectAttempts])
+  }, [url, reconnectAttempts])
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -115,15 +126,20 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   }, [])
 
   useEffect(() => {
-    connect()
+    // Small delay to prevent initial glitch
+    const initTimeout = setTimeout(() => {
+      connect()
+    }, 100)
 
     return () => {
+      clearTimeout(initTimeout)
       disconnect()
     }
   }, [connect, disconnect])
 
   return {
     isConnected,
+    isInitializing,
     sendMessage,
     disconnect,
     reconnect: connect,

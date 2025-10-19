@@ -64,7 +64,7 @@ export default function Dashboard() {
     console.log('🔌 Dashboard disconnected from real-time updates')
   }, [])
 
-  const { isConnected } = useWebSocket(WS_URL, {
+  const { isConnected, isInitializing } = useWebSocket(WS_URL, {
     onStationUpdate: handleStationUpdate,
     onSessionUpdate: handleSessionUpdate,
     onStatsUpdate: handleStatsUpdate,
@@ -138,28 +138,19 @@ export default function Dashboard() {
               <AmbientClock />
               
               {/* WebSocket Status Indicator - Enhanced */}
-              <div className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all duration-300 ${
-                isConnected 
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' 
-                  : 'bg-neutral-800/60 border border-neutral-700/50'
-              }`}>
-                {isConnected ? (
-                  <>
-                    <div className="relative">
-                      <Wifi className="w-4 h-4 text-emerald-400" />
-                      <div className="absolute inset-0 animate-ping">
-                        <Wifi className="w-4 h-4 text-emerald-400 opacity-40" />
-                      </div>
+              {!isInitializing && isConnected && (
+                <div 
+                  className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
+                >
+                  <div className="relative">
+                    <Wifi className="w-4 h-4 text-emerald-400" />
+                    <div className="absolute inset-0 animate-ping">
+                      <Wifi className="w-4 h-4 text-emerald-400 opacity-40" />
                     </div>
-                    <span className="text-xs text-emerald-400 font-semibold tracking-wide">LIVE</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="w-4 h-4 text-gray-500" />
-                    <span className="text-xs text-gray-500 font-semibold tracking-wide">OFFLINE</span>
-                  </>
-                )}
-              </div>
+                  </div>
+                  <span className="text-xs text-emerald-400 font-semibold tracking-wide">LIVE</span>
+                </div>
+              )}
 
               {user && (
                 <div className="text-right px-4 py-2 bg-neutral-800/40 rounded-xl border border-neutral-700/50">
