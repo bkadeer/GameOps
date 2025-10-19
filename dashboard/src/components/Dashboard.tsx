@@ -33,14 +33,17 @@ export default function Dashboard() {
 
   const handleSessionUpdate = useCallback((data: any) => {
     console.log('Session update received:', data)
+    // Immediately refresh data for real-time updates
     Promise.all([
       sessionsAPI.getAll(),
-      dashboardAPI.getStats()
-    ]).then(([sessionsData, statsData]) => {
+      dashboardAPI.getStats(),
+      stationsAPI.getAll()
+    ]).then(([sessionsData, statsData, stationsData]) => {
       setSessions(sessionsData)
       setStats(statsData)
+      setStations(stationsData)
     }).catch(console.error)
-  }, [setSessions, setStats])
+  }, [setSessions, setStats, setStations])
 
   const handleStatsUpdate = useCallback((data: any) => {
     console.log('Stats update received:', data)
@@ -51,7 +54,7 @@ export default function Dashboard() {
     console.log('✅ Dashboard connected to real-time updates')
     // Only show toast once, not on every reconnect
     toast.success('Connected to real-time updates', { 
-      duration: 2000,
+      duration: 1500,
       id: 'ws-connected' // Prevent duplicate toasts
     })
   }, [])

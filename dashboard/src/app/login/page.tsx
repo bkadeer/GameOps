@@ -65,39 +65,22 @@ export default function LoginPage() {
       <VideoBackground />
 
       {/* Login Card */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-12">
-        <div className="w-full max-w-[520px] animate-fade-in">
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4" style={{ alignItems: 'flex-end', paddingBottom: '13vh' }}>
+        <div className="w-full max-w-[420px] animate-fade-in">
           {/* Glass-morphic Card */}
           <div className="relative">
             {/* Glow effect */}
             <div className="absolute -inset-[1px] bg-gradient-to-br from-[#D97A32]/10 via-transparent to-[#D97A32]/5 rounded-[32px] blur-xl"></div>
 
             {/* Main card */}
-            <div className="relative bg-[rgba(28,28,28,0.4)] backdrop-blur-2xl rounded-[32px] border border-[#D97A32]/10 px-16 py-16">
-              {/* Centered Controller Icon */}
-              <div className="flex justify-center mb-14">
-                <div className="relative group cursor-pointer">
-                  {/* Hover glow effect */}
-                  <div className="absolute inset-0 bg-[#D97A32] rounded-2xl blur-3xl opacity-0 group-hover:opacity-40 transition-all duration-700"></div>
-                  <div className="absolute inset-0 bg-[#D97A32] rounded-2xl blur-xl opacity-0 group-hover:opacity-20 transition-all duration-500"></div>
-
-                  {/* Icon container */}
-                  <div className="relative w-24 h-24 bg-gradient-to-br from-[#D97A32]/10 to-[#E5893B]/5 backdrop-blur-sm border border-[#D97A32]/20 group-hover:border-[#D97A32]/40 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-105">
-                    <Gamepad2
-                      className="w-12 h-12 text-[#D97A32] group-hover:text-[#E5893B] transition-colors duration-500"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                </div>
-              </div>
-
+            <div className="relative bg-[rgba(28,28,28,0.15)] backdrop-blur-xl rounded-[32px] border border-[#D97A32]/20 px-10 py-10">
               {/* Header */}
-              <div className="mb-14 text-center">
-                <h1 className="text-[32px] font-light text-[#FFFFFF] mb-3 tracking-wide">
+              <div className="mb-8 text-center">
+                <h1 className="text-[28px] font-light text-[#FFFFFF] mb-2 tracking-wide">
                   Welcome Back
                 </h1>
-                <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-[#D97A32] to-transparent mb-5 mx-auto"></div>
-                <p className="text-[#9CA3AF] text-[15px] font-light tracking-wide">
+                <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-[#D97A32] to-transparent mb-4 mx-auto"></div>
+                <p className="text-[#9CA3AF] text-[14px] font-light tracking-wide">
                   Access your command center
                 </p>
               </div>
@@ -109,9 +92,36 @@ export default function LoginPage() {
               )}
 
               <link
-                href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+                href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Saira:wght@100&display=block"
                 rel="stylesheet"
               />
+
+              <style dangerouslySetInnerHTML={{__html: `
+                @import url('https://fonts.googleapis.com/css2?family=Saira:wght@100&display=block');
+                
+                input {
+                  font-synthesis: none !important;
+                  -webkit-font-smoothing: antialiased !important;
+                  -moz-osx-font-smoothing: grayscale !important;
+                }
+                
+                input:-webkit-autofill,
+                input:-webkit-autofill:hover,
+                input:-webkit-autofill:focus,
+                input:-webkit-autofill:active {
+                  -webkit-box-shadow: 0 0 0 30px rgba(28, 28, 28, 0.6) inset !important;
+                  -webkit-text-fill-color: #00ff41 !important;
+                  transition: background-color 5000s ease-in-out 0s;
+                  font-family: 'Saira', sans-serif !important;
+                  font-weight: 100 !important;
+                  letter-spacing: 0.35em !important;
+                  text-indent: 0.5em !important;
+                }
+                
+                #username:-webkit-autofill {
+                  text-transform: uppercase !important;
+                }
+              `}} />
 
               <form onSubmit={handleSubmit} className="space-y-11">
                 {/* Username Field */}
@@ -128,13 +138,19 @@ export default function LoginPage() {
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="relative w-full px-8 py-4 bg-[rgba(10,10,10,0.3)] border border-[#2a2a2a] group-hover:border-[#D97A32]/30 rounded-xl text-[16px] text-[#FFFFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#D97A32] transition-all duration-900 tracking-wide"
+                      className="relative w-full px-8 py-4 bg-[rgba(28,28,28,0.6)] backdrop-blur-md border border-[#2a2a2a] group-hover:border-[#D97A32]/30 rounded-xl text-[16px] text-[#00ff41] placeholder-[#6B7280] focus:outline-none focus:border-[#D97A32] transition-all duration-900 uppercase"
                       placeholder="username or email"
                       required
                       autoComplete="username"
                       style={{
-                        fontFamily: "'Poppins', sans-serif",
-                        letterSpacing: "0.08em", // Slightly more elegant spacing
+                        fontFamily: "'Saira', sans-serif",
+                        fontWeight: 100,
+                        letterSpacing: "0.35em",
+                        backgroundColor: "rgba(28, 28, 28, 0.6)",
+                        color: "#00ff41",
+                        textShadow: "0 0 10px rgba(0, 255, 65, 0.5)",
+                        textTransform: "uppercase",
+                        textIndent: "0.5em",
                       }}
                     />
                   </div>
@@ -162,10 +178,19 @@ export default function LoginPage() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="relative w-full px-6 py-4 bg-[rgba(10,10,10,0.3)] border border-[#2a2a2a] group-hover:border-[#D97A32]/30 rounded-xl text-[16px] text-[#FFFFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#D97A32] transition-all duration-500 pr-14 font-mono tracking-wider"
+                      className="relative w-full px-6 py-4 bg-[rgba(28,28,28,0.6)] backdrop-blur-md border border-[#2a2a2a] group-hover:border-[#D97A32]/30 rounded-xl text-[16px] text-[#00ff41] placeholder-[#6B7280] focus:outline-none focus:border-[#D97A32] transition-all duration-500 pr-14 tracking-wider"
                       placeholder="••••••••••••"
                       required
                       autoComplete="current-password"
+                      style={{
+                        fontFamily: "'Saira', sans-serif",
+                        fontWeight: 100,
+                        letterSpacing: "0.35em",
+                        backgroundColor: "rgba(28, 28, 28, 0.6)",
+                        color: "#00ff41",
+                        textShadow: "0 0 10px rgba(0, 255, 65, 0.5)",
+                        textIndent: "0.5em",
+                      }}
                     />
                     <button
                       type="button"
@@ -185,9 +210,12 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative w-full mt-12 py-4 bg-gradient-to-r from-[#D97A32] to-[#E5893B] hover:from-[#E5893B] hover:to-[#F09850] text-white text-[14px] font-medium rounded-full transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em] overflow-hidden"
+                  className="group relative w-full mt-20 py-4 bg-gradient-to-r from-[#D97A32] to-[#E5893B] hover:from-[#E5893B] hover:to-[#F09850] text-white text-[16px] font-bold rounded-full transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.3em] overflow-hidden shadow-lg shadow-[#D97A32]/50"
+                  style={{
+                    textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
+                  }}
                 >
-                  <span className="relative z-10">
+                  <span className="relative z-10" style={{ color: "#FFFFFF" }}>
                     {loading ? (
                       <span className="flex items-center justify-center gap-3">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

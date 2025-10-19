@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 from app.api.deps import get_db, get_current_staff
@@ -77,8 +77,8 @@ async def create_session(
         db.add(payment)
         await db.flush()
         
-        # Create session
-        started_at = datetime.utcnow()
+        # Create session with timezone-aware datetime
+        started_at = datetime.now(timezone.utc)
         scheduled_end_at = started_at + timedelta(minutes=session_data.duration_minutes)
         
         session = Session(
@@ -242,7 +242,7 @@ async def stop_session(
     
     # Stop session
     session.status = SessionStatus.STOPPED
-    session.actual_end_at = datetime.utcnow()
+    session.actual_end_at = datetime.now(timezone.utc)
     
     # Update station status
     result = await db.execute(

@@ -65,9 +65,15 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
         amount: formData.amount,
         notes: formData.notes || undefined
       })
-      toast.success(`Session started on ${station.name} for ${formData.duration_minutes} minutes!`)
-      onSuccess()
+      
+      // Close modal and refresh immediately
       onClose()
+      onSuccess()
+      
+      // Show success toast after modal closes
+      toast.success(`Session started on ${station.name} for ${formData.duration_minutes} minutes!`, {
+        duration: 2000
+      })
       // Reset form
       setFormData({
         duration_minutes: 60,
@@ -139,15 +145,26 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
             
             {/* Custom Duration */}
             <div className="mt-3">
-              <input
-                type="number"
-                min="15"
-                step="15"
-                value={formData.duration_minutes}
-                onChange={(e) => handleDurationChange(parseInt(e.target.value) || 60)}
-                className="w-full px-4 py-2.5 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
-                placeholder="Custom duration (minutes)"
-              />
+              <label className="block text-xs text-[#A0A0A0] mb-1.5 ml-1">
+                Custom Duration (minutes)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="15"
+                  step="15"
+                  value={formData.duration_minutes}
+                  onChange={(e) => handleDurationChange(parseInt(e.target.value) || 60)}
+                  className="w-full px-4 py-2.5 pr-16 bg-[#2D2D2D] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors"
+                  placeholder="Enter minutes"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0A0A0] text-sm">
+                  min
+                </span>
+              </div>
+              <p className="text-xs text-[#A0A0A0] mt-1.5 ml-1">
+                = {(formData.duration_minutes / 60).toFixed(1)} hours
+              </p>
             </div>
           </div>
 

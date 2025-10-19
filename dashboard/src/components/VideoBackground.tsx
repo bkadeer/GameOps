@@ -12,7 +12,7 @@ export default function VideoBackground() {
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
       >
-        <source src="/callofduty.mp4" type="video/mp4" />
+        <source src="/e-mantra.mp4" type="video/mp4" />
       </video>
 
       {/* Dark overlay for better text readability */}

@@ -25,13 +25,18 @@ async def get_dashboard(
     )
     active_sessions = result.scalar()
     
-    # Count total stations
-    result = await db.execute(select(func.count(Station.id)))
+    # Count total stations (excluding soft-deleted)
+    result = await db.execute(
+        select(func.count(Station.id)).where(Station.deleted_at.is_(None))
+    )
     total_stations = result.scalar()
     
-    # Count available stations
+    # Count available stations (excluding soft-deleted)
     result = await db.execute(
-        select(func.count(Station.id)).where(Station.status == StationStatus.ONLINE)
+        select(func.count(Station.id)).where(
+            Station.status == StationStatus.ONLINE,
+            Station.deleted_at.is_(None)
+        )
     )
     available_stations = result.scalar()
     
@@ -45,9 +50,9 @@ async def get_dashboard(
     )
     revenue_today = result.scalar() or 0.0
     
-    # Get all stations with their current sessions
+    # Get all stations with their current sessions (excluding soft-deleted)
     result = await db.execute(
-        select(Station).order_by(Station.name)
+        select(Station).where(Station.deleted_at.is_(None)).order_by(Station.name)
     )
     stations = result.scalars().all()
     
