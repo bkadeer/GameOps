@@ -8,6 +8,8 @@ from app.websocket.manager import connection_manager
 from app.core.database import AsyncSessionLocal
 from app.core.security import verify_token
 from app.models.station import Station, StationStatus
+from app.services.event_logger import EventLogger, EventType
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,15 @@ async def handle_agent_connection(websocket: WebSocket, station_id: str, token: 
     
     # Accept connection
     await connection_manager.connect(station_id, websocket)
+    
+    # Log agent connection event
+    async with AsyncSessionLocal() as db:
+        await EventLogger.log_agent_event(
+            db=db,
+            event_type="connected",
+            station_id=UUID(station_id),
+            data={"station_name": station.name}
+        )
     
     # Send server_hello
     await connection_manager.send_message(station_id, {
@@ -101,7 +112,7 @@ async def handle_agent_connection(websocket: WebSocket, station_id: str, token: 
     finally:
         connection_manager.disconnect(station_id)
         
-        # Update station status to OFFLINE
+        # Update station status to OFFLINE and log disconnection
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(Station).where(Station.id == UUID(station_id))
@@ -110,6 +121,14 @@ async def handle_agent_connection(websocket: WebSocket, station_id: str, token: 
             if station:
                 station.status = StationStatus.OFFLINE
                 await db.commit()
+                
+                # Log agent disconnection event
+                await EventLogger.log_agent_event(
+                    db=db,
+                    event_type="disconnected",
+                    station_id=UUID(station_id),
+                    data={"station_name": station.name}
+                )
 
 async def handle_agent_hello(station_id: str, data: dict):
     """Handle agent_hello message"""
@@ -141,17 +160,58 @@ async def handle_heartbeat(station_id: str, data: dict):
 async def handle_session_event(station_id: str, data: dict):
     """Handle session event from agent"""
     logger.info(f"Session event from {station_id}: {data}")
-    # TODO: Log event to database
+    
+    # Log event to database
+    async with AsyncSessionLocal() as db:
+        event_data = data.get("data", {})
+        await EventLogger.log_agent_event(
+            db=db,
+            event_type="session_event",
+            station_id=UUID(station_id),
+            data=event_data
+        )
 
 async def handle_status_change(station_id: str, data: dict):
     """Handle station status change"""
     logger.info(f"Status change from {station_id}: {data}")
-    # TODO: Update station status in database
+    
+    # Update station status in database
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Station).where(Station.id == UUID(station_id))
+        )
+        station = result.scalar_one_or_none()
+        if station:
+            old_status = station.status.value
+            new_status = data.get("data", {}).get("status")
+            
+            # Log status change event
+            await EventLogger.log_station_event(
+                db=db,
+                event_type=EventType.STATION_STATUS_CHANGED,
+                station_id=UUID(station_id),
+                data={
+                    "old_status": old_status,
+                    "new_status": new_status,
+                    "reason": data.get("data", {}).get("reason")
+                }
+            )
 
 async def handle_agent_error(station_id: str, data: dict):
     """Handle error reported by agent"""
     logger.error(f"Agent error from {station_id}: {data}")
-    # TODO: Log error to database
+    
+    # Log error to database
+    async with AsyncSessionLocal() as db:
+        error_data = data.get("data", {})
+        await EventLogger.log_error(
+            db=db,
+            error_type="agent_error",
+            error_message=error_data.get("message", "Unknown error"),
+            entity_type="station",
+            entity_id=UUID(station_id),
+            stack_trace=error_data.get("stack_trace")
+        )
 
 async def handle_sync_request(station_id: str, data: dict):
     """Handle sync request after reconnection"""

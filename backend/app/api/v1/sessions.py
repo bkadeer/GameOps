@@ -14,6 +14,8 @@ from app.models.user import User
 from app.schemas.session import SessionCreate, SessionExtend, SessionResponse
 from app.websocket.manager import connection_manager
 from app.websocket.dashboard_manager import dashboard_manager
+from app.core.redis import redis_manager
+from app.services.event_logger import EventLogger, EventType
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -132,7 +134,26 @@ async def create_session(
         station_dict = StationResponseSchema.model_validate(station).model_dump(mode='json')
         await dashboard_manager.send_station_update(station_dict)
         
-        # TODO: Cache session in Redis
+        # Cache session in Redis
+        await redis_manager.cache_session(
+            str(session.id),
+            session_dict,
+            ttl=session_data.duration_minutes * 60 + 300  # Session duration + 5 min buffer
+        )
+        
+        # Log event
+        await EventLogger.log_session_event(
+            db=db,
+            event_type=EventType.SESSION_CREATED,
+            session_id=session.id,
+            user_id=current_user.id,
+            data={
+                "station_id": str(session.station_id),
+                "station_name": station.name,
+                "duration_minutes": session_data.duration_minutes,
+                "amount": float(session_data.amount)
+            }
+        )
         
         return session
         
@@ -217,8 +238,36 @@ async def extend_session(
     session_dict = SessionResponse.model_validate(session).model_dump(mode='json')
     await dashboard_manager.send_session_update(session_dict)
     
-    # TODO: Notify agent via WebSocket
-    # TODO: Update Redis cache
+    # Notify agent via WebSocket
+    await connection_manager.send_to_station(str(session.station_id), {
+        "type": "session_extended",
+        "data": {
+            "id": str(session.id),
+            "extended_minutes": extend_data.additional_minutes,
+            "new_end_time": session.scheduled_end_at.isoformat(),
+            "total_extended_minutes": session.extended_minutes
+        }
+    })
+    
+    # Update Redis cache
+    await redis_manager.cache_session(
+        str(session.id),
+        session_dict,
+        ttl=(session.duration_minutes + session.extended_minutes) * 60 + 300
+    )
+    
+    # Log event
+    await EventLogger.log_session_event(
+        db=db,
+        event_type=EventType.SESSION_EXTENDED,
+        session_id=session.id,
+        user_id=current_user.id,
+        data={
+            "additional_minutes": extend_data.additional_minutes,
+            "total_extended_minutes": session.extended_minutes,
+            "amount": float(extend_data.amount)
+        }
+    )
     
     return session
 
@@ -277,7 +326,29 @@ async def stop_session(
         station_dict = StationResponseSchema.model_validate(station).model_dump(mode='json')
         await dashboard_manager.send_station_update(station_dict)
     
-    # TODO: Notify agent via WebSocket
-    # TODO: Remove from Redis cache
+    # Notify agent via WebSocket
+    await connection_manager.send_to_station(str(session.station_id), {
+        "type": "session_end",
+        "data": {
+            "id": str(session.id),
+            "ended_at": session.actual_end_at.isoformat(),
+            "reason": "manual_stop"
+        }
+    })
+    
+    # Remove from Redis cache
+    await redis_manager.delete_session(str(session.id))
+    
+    # Log event
+    await EventLogger.log_session_event(
+        db=db,
+        event_type=EventType.SESSION_ENDED,
+        session_id=session.id,
+        user_id=current_user.id,
+        data={
+            "reason": "manual_stop",
+            "ended_by": current_user.username
+        }
+    )
     
     return session

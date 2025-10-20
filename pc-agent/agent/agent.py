@@ -12,6 +12,7 @@ from .websocket_client import WebSocketClient
 from .system_control import SystemControl
 from .system_monitor import SystemMonitor
 from .session_manager import SessionManager
+from .kiosk_overlay import KioskOverlay
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,11 @@ class PCAgent:
         self.system_control = SystemControl()
         self.system_monitor = SystemMonitor()
         self.session_manager = SessionManager(self.system_control, self.config)
+        
+        # Kiosk overlay UI
+        self.kiosk_overlay = None
+        if self.config.get('features.show_overlay', True):
+            self.kiosk_overlay = KioskOverlay()
         
         # WebSocket client
         self.ws_client = WebSocketClient(
@@ -41,8 +47,10 @@ class PCAgent:
     def _register_handlers(self):
         """Register WebSocket message handlers"""
         self.ws_client.on_message("session_start", self._handle_session_start)
-        self.ws_client.on_message("session_extend", self._handle_session_extend)
+        self.ws_client.on_message("session_extended", self._handle_session_extend)
         self.ws_client.on_message("session_end", self._handle_session_end)
+        self.ws_client.on_message("server_hello", self._handle_server_hello)
+        self.ws_client.on_message("heartbeat_ack", self._handle_heartbeat_ack)
         self.ws_client.on_message("lock_station", self._handle_lock_station)
         self.ws_client.on_message("unlock_station", self._handle_unlock_station)
         self.ws_client.on_message("get_status", self._handle_get_status)
@@ -53,46 +61,85 @@ class PCAgent:
         logger.info("Received session start command")
         session_data = message.get("data", {})
         
-        success = self.session_manager.start_session(session_data)
-        
-        await self.ws_client.send_message("session_start_response", {
-            "success": success,
-            "session_id": session_data.get("id"),
-            "status": self.session_manager.get_session_status()
-        })
+        try:
+            success = self.session_manager.start_session(session_data)
+            
+            # Update overlay
+            if self.kiosk_overlay:
+                self.kiosk_overlay.update_session(self.session_manager.get_session_status())
+            
+            await self.ws_client.send_message("session_event", {
+                "event": "session_started",
+                "success": success,
+                "session_id": session_data.get("id"),
+                "status": self.session_manager.get_session_status()
+            })
+        except Exception as e:
+            logger.error(f"Error handling session start: {e}")
+            await self.ws_client.send_message("error", {
+                "message": f"Failed to start session: {str(e)}",
+                "session_id": session_data.get("id")
+            })
     
     async def _handle_session_extend(self, message: Dict[str, Any]):
         """Handle session extend command"""
         logger.info("Received session extend command")
         data = message.get("data", {})
         
-        success = self.session_manager.extend_session(
-            additional_minutes=data.get("additional_minutes"),
-            new_end_time=data.get("new_end_time")
-        )
-        
-        await self.ws_client.send_message("session_extend_response", {
-            "success": success,
-            "status": self.session_manager.get_session_status()
-        })
+        try:
+            success = self.session_manager.extend_session(
+                additional_minutes=data.get("extended_minutes"),
+                new_end_time=data.get("new_end_time")
+            )
+            
+            # Update overlay
+            if self.kiosk_overlay:
+                self.kiosk_overlay.update_session(self.session_manager.get_session_status())
+            
+            await self.ws_client.send_message("session_event", {
+                "event": "session_extended",
+                "success": success,
+                "session_id": data.get("id"),
+                "status": self.session_manager.get_session_status()
+            })
+        except Exception as e:
+            logger.error(f"Error handling session extend: {e}")
+            await self.ws_client.send_message("error", {
+                "message": f"Failed to extend session: {str(e)}",
+                "session_id": data.get("id")
+            })
     
     async def _handle_session_end(self, message: Dict[str, Any]):
         """Handle session end command"""
         logger.info("Received session end command")
         data = message.get("data", {})
         
-        success = self.session_manager.end_session(
-            reason=data.get("reason", "manual")
-        )
-        
-        await self.ws_client.send_message("session_end_response", {
-            "success": success
-        })
-        
-        # Lock workstation after session ends
-        if self.config.get('features.auto_lock', True):
-            await asyncio.sleep(2)  # Small delay
-            self.system_control.lock_workstation()
+        try:
+            success = self.session_manager.end_session(
+                reason=data.get("reason", "manual")
+            )
+            
+            # Update overlay
+            if self.kiosk_overlay:
+                self.kiosk_overlay.update_session(self.session_manager.get_session_status())
+            
+            await self.ws_client.send_message("session_event", {
+                "event": "session_ended",
+                "success": success,
+                "session_id": data.get("id"),
+                "reason": data.get("reason", "manual")
+            })
+            
+            # Lock workstation after session ends
+            if self.config.get('features.auto_lock', True):
+                await asyncio.sleep(2)  # Small delay
+                self.system_control.lock_workstation()
+        except Exception as e:
+            logger.error(f"Error handling session end: {e}")
+            await self.ws_client.send_message("error", {
+                "message": f"Failed to end session: {str(e)}",
+                "session_id": data.get("id")
+            })
     
     async def _handle_lock_station(self, message: Dict[str, Any]):
         """Handle lock station command"""
@@ -128,6 +175,24 @@ class PCAgent:
         }
         
         await self.ws_client.send_message("status_report", status)
+    
+    async def _handle_server_hello(self, message: Dict[str, Any]):
+        """Handle server hello message"""
+        logger.info("Received server hello")
+        data = message.get("data", {})
+        logger.info(f"Server version: {data.get('server_version')}")
+        logger.info(f"Heartbeat interval: {data.get('heartbeat_interval')}s")
+        
+        # Send agent hello with system specs
+        await self.ws_client.send_message("agent_hello", {
+            "agent_version": "1.0.0",
+            "specs": self.system_monitor.get_status_report()
+        })
+    
+    async def _handle_heartbeat_ack(self, message: Dict[str, Any]):
+        """Handle heartbeat acknowledgment"""
+        # Just log it, no action needed
+        pass
     
     async def _handle_ping(self, message: Dict[str, Any]):
         """Handle ping command"""
@@ -186,6 +251,10 @@ class PCAgent:
         
         self.running = True
         
+        # Start kiosk overlay
+        if self.kiosk_overlay:
+            self.kiosk_overlay.start()
+        
         # Start status monitoring
         self.status_task = asyncio.create_task(self._status_monitoring_loop())
         
@@ -207,6 +276,10 @@ class PCAgent:
         
         # Stop WebSocket client
         await self.ws_client.stop()
+        
+        # Stop kiosk overlay
+        if self.kiosk_overlay:
+            self.kiosk_overlay.stop()
         
         # Allow system sleep
         self.system_control.prevent_sleep(False)

@@ -6,6 +6,7 @@ import logging
 
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.core.redis import redis_manager
 from app.api.v1 import api_router
 from app.websocket.manager import connection_manager
 from app.websocket.dashboard_manager import dashboard_manager
@@ -32,6 +33,9 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
+    # Connect to Redis
+    await redis_manager.connect()
+    
     # Start session monitor
     global session_monitor
     session_monitor = SessionMonitor()
@@ -51,6 +55,9 @@ async def lifespan(app: FastAPI):
     # Close WebSocket connections
     await connection_manager.disconnect_all()
     await dashboard_manager.disconnect_all()
+    
+    # Disconnect Redis
+    await redis_manager.disconnect()
     
     logger.info("EVMS Backend shut down successfully")
 
