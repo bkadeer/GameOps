@@ -164,7 +164,7 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
                   <h3 className="text-gray-100 font-bold tracking-tight">{session.station_name || session.station?.name || `Station ${session.station_id.slice(0, 8)}`}</h3>
                   <p className="text-gray-400 text-sm flex items-center gap-1.5 font-medium">
                     <User className="w-3.5 h-3.5" />
-                    Created by: {session.user_name || 'Unknown'}
+                    {session.user_name || 'Walk-in'}
                   </p>
                 </div>
               </div>
