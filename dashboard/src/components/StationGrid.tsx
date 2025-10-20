@@ -63,6 +63,7 @@ export default function StationGrid({ stations, sessions, onStartSession, onUpda
             onEndSession={setEndSession}
             onEdit={setEditStation}
             onDelete={() => setDeleteConfirm(station.id)}
+            onUpdate={onUpdate}
           />
         )
       })}

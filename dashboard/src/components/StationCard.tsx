@@ -4,6 +4,8 @@ import { Monitor, Gamepad2, Circle, Play, Edit2, Trash2, Cpu, MemoryStick, Clock
 import { useEffect, useState } from 'react'
 import type { Station, Session } from '@/types'
 import { formatDuration } from '@/lib/utils'
+import { sessionsAPI } from '@/lib/api'
+import toast from 'react-hot-toast'
 
 interface StationCardProps {
   station: Station
@@ -13,15 +15,33 @@ interface StationCardProps {
   onEndSession?: (session: Session) => void
   onEdit: (station: Station) => void
   onDelete: (station: Station) => void
+  onUpdate?: () => void // Add callback to refresh data
 }
 
-export default function StationCard({ station, session, onStartSession, onExtendSession, onEndSession, onEdit, onDelete }: StationCardProps) {
+export default function StationCard({ station, session, onStartSession, onExtendSession, onEndSession, onEdit, onDelete, onUpdate }: StationCardProps) {
   const [timeRemaining, setTimeRemaining] = useState(0)
+  const [hasAutoEnded, setHasAutoEnded] = useState(false)
+  
+  // Auto-end session when time reaches 0
+  const autoEndSession = async (sessionToEnd: Session) => {
+    try {
+      await sessionsAPI.end(sessionToEnd.id)
+      toast.success('Session ended automatically - time expired')
+      // Trigger data refresh if callback provided
+      if (onUpdate) {
+        onUpdate()
+      }
+    } catch (error) {
+      console.error('Failed to auto-end session:', error)
+      toast.error('Failed to end expired session')
+    }
+  }
   
   // Calculate time remaining for active sessions
   useEffect(() => {
     if (!session) {
       setTimeRemaining(0)
+      setHasAutoEnded(false)
       return
     }
     
@@ -30,12 +50,18 @@ export default function StationCard({ station, session, onStartSession, onExtend
       const now = Date.now()
       const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
       setTimeRemaining(remaining)
+      
+      // Auto-end session when time reaches 0
+      if (remaining === 0 && !hasAutoEnded) {
+        setHasAutoEnded(true)
+        autoEndSession(session)
+      }
     }
     
     calculateTime()
     const interval = setInterval(calculateTime, 1000)
     return () => clearInterval(interval)
-  }, [session])
+  }, [session, hasAutoEnded])
   
   // Determine permissions
   const canEdit = station.status !== 'IN_SESSION'
