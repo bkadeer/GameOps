@@ -91,7 +91,6 @@ export const sessionsAPI = {
   },
   create: async (data: {
     station_id: string
-    user_id?: string
     duration_minutes: number
     payment_method: string
     amount: number

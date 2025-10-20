@@ -8,7 +8,6 @@ from app.models.payment import PaymentMethod
 class SessionBase(BaseModel):
     """Base session schema"""
     station_id: UUID
-    user_id: Optional[UUID] = None
     duration_minutes: int = Field(
         ..., 
         ge=15, 
@@ -66,6 +65,8 @@ class SessionUpdate(BaseModel):
 class SessionResponse(SessionBase):
     """Session response schema"""
     id: UUID
+    user_name: Optional[str] = None  # Staff member who created the session
+    station_name: Optional[str] = None  # Station name for display
     started_at: datetime
     scheduled_end_at: datetime
     actual_end_at: Optional[datetime] = None

@@ -16,10 +16,11 @@ class Session(Base):
     __tablename__ = "sessions"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_name = Column(String(255), nullable=True, index=True)  # Store user name directly for easy tracking
     station_id = Column(UUID(as_uuid=True), ForeignKey("stations.id"), nullable=False, index=True)
+    station_name = Column(String(255), nullable=True, index=True)  # Store station name for human readability
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     scheduled_end_at = Column(DateTime(timezone=True), nullable=False, index=True)
     actual_end_at = Column(DateTime(timezone=True), nullable=True)

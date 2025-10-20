@@ -6,7 +6,8 @@ from app.models.payment import PaymentMethod, PaymentStatus
 
 class PaymentBase(BaseModel):
     """Base payment schema"""
-    user_id: Optional[UUID] = None
+    user_name: Optional[str] = Field(None, max_length=255)
+    station_id: Optional[UUID] = None
     amount: float = Field(..., ge=0, le=10000)
     payment_method: PaymentMethod
     payment_metadata: Optional[Dict[str, Any]] = None

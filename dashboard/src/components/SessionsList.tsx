@@ -161,10 +161,10 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
                   <Monitor className="w-5 h-5 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-gray-100 font-bold tracking-tight">{session.station?.name || `Station ${session.station_id.slice(0, 8)}`}</h3>
+                  <h3 className="text-gray-100 font-bold tracking-tight">{session.station_name || session.station?.name || `Station ${session.station_id.slice(0, 8)}`}</h3>
                   <p className="text-gray-400 text-sm flex items-center gap-1.5 font-medium">
                     <User className="w-3.5 h-3.5" />
-                    {session.user_id ? session.user_id.slice(0, 8) : 'Walk-in'}
+                    Created by: {session.user_name || 'Unknown'}
                   </p>
                 </div>
               </div>
@@ -245,7 +245,7 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
             <div className="space-y-5 mb-6">
               <div>
                 <p className="text-gray-400 text-sm mb-2">Station</p>
-                <p className="text-gray-100 font-semibold">{selectedSession.station?.name || `Station ${selectedSession.station_id.slice(0, 8)}`}</p>
+                <p className="text-gray-100 font-semibold">{selectedSession.station_name || selectedSession.station?.name || `Station ${selectedSession.station_id.slice(0, 8)}`}</p>
               </div>
 
               <div>
@@ -352,7 +352,7 @@ export default function SessionsList({ sessions, onUpdate }: SessionsListProps) 
             <div className="space-y-5 mb-6">
               <p className="text-gray-300">Are you sure you want to end this session?</p>
               <div className="bg-neutral-800/40 rounded-xl p-5 border border-neutral-700/40">
-                <p className="text-gray-100 font-semibold mb-2">{selectedSession.station?.name || `Station ${selectedSession.station_id.slice(0, 8)}`}</p>
+                <p className="text-gray-100 font-semibold mb-2">{selectedSession.station_name || selectedSession.station?.name || `Station ${selectedSession.station_id.slice(0, 8)}`}</p>
                 <p className="text-gray-400 text-sm">Time remaining: {formatDuration(timeRemaining[selectedSession.id] || 0)}</p>
               </div>
             </div>

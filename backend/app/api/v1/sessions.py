@@ -68,8 +68,13 @@ async def create_session(
     
     # Create payment and session - wrap in try/except
     try:
+        # Use the logged-in staff member's username (admin/employee who created the session)
+        staff_username = current_user.username
+        logger.info(f"Session created by staff: '{staff_username}' (user_id: {current_user.id})")
+        
         payment = Payment(
-            user_id=session_data.user_id if session_data.user_id else None,
+            user_name=staff_username,  # Track which staff member processed the payment
+            station_id=session_data.station_id,  # Track which station generated revenue
             amount=session_data.amount,
             payment_method=session_data.payment_method,
             status=PaymentStatus.COMPLETED  # Simplified for MVP
@@ -82,8 +87,9 @@ async def create_session(
         scheduled_end_at = started_at + timedelta(minutes=session_data.duration_minutes)
         
         session = Session(
+            user_name=staff_username,  # Track which staff member created the session
             station_id=session_data.station_id,
-            user_id=session_data.user_id if session_data.user_id else None,
+            station_name=station.name,  # Store station name for human readability
             started_at=started_at,
             scheduled_end_at=scheduled_end_at,
             duration_minutes=session_data.duration_minutes,
@@ -108,7 +114,7 @@ async def create_session(
             "type": "session_start",
             "data": {
                 "id": str(session.id),
-                "user_id": str(session.user_id) if session.user_id else None,
+                "user_name": session.user_name,
                 "started_at": session.started_at.isoformat(),
                 "scheduled_end_at": session.scheduled_end_at.isoformat(),
                 "duration_minutes": session.duration_minutes,
@@ -187,14 +193,16 @@ async def extend_session(
             detail="Cannot extend inactive session"
         )
     
-    # Create additional payment
+    # Create additional payment - track which staff member extended the session
     payment = Payment(
-        user_id=session.user_id,
+        user_name=current_user.username,  # Track which staff member processed the extension payment
+        station_id=session.station_id,  # Track revenue per station
         amount=extend_data.amount,
         payment_method=extend_data.payment_method,
         status=PaymentStatus.COMPLETED
     )
     db.add(payment)
+    logger.info(f"Session extended by staff: '{current_user.username}'")
     
     # Extend session
     session.extended_minutes += extend_data.additional_minutes
