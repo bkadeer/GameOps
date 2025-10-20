@@ -5,7 +5,7 @@ from typing import List
 from uuid import UUID
 import logging
 
-from app.api.deps import get_db, get_current_admin
+from app.api.deps import get_db, get_current_admin, get_current_user
 from app.models.user import User, Role
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.core.security import get_password_hash
@@ -139,4 +139,97 @@ async def get_user(
             detail="User not found"
         )
     
+    return user
+
+@router.put("/{user_id}/password", response_model=UserResponse)
+async def reset_user_password(
+    user_id: UUID,
+    password_data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Reset user password
+    - Users can reset their own password
+    - Admins can reset any user's password
+    
+    Request body: {"password": "new_password"}
+    """
+    password = password_data.get('password')
+    if not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is required"
+        )
+    
+    # Validate password
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters"
+        )
+    
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Check permissions: user can reset their own password, or must be admin
+    if user.id != current_user.id and current_user.role != Role.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only reset your own password"
+        )
+    
+    # Update password
+    user.password_hash = get_password_hash(password)
+    await db.commit()
+    await db.refresh(user)
+    
+    if user.id == current_user.id:
+        logger.info(f"User {user.username} reset their own password")
+    else:
+        logger.info(f"Password reset for user: {user.username} by admin: {current_user.username}")
+    return user
+
+@router.put("/{user_id}/toggle-status", response_model=UserResponse)
+async def toggle_user_status(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """
+    Enable/Disable user account (Admin only)
+    """
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Prevent disabling yourself
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot disable your own account"
+        )
+    
+    # Toggle status
+    user.is_active = not user.is_active
+    await db.commit()
+    await db.refresh(user)
+    
+    status_text = "enabled" if user.is_active else "disabled"
+    logger.info(f"User {user.username} {status_text} by admin: {current_user.username}")
     return user

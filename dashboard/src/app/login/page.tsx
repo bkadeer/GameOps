@@ -35,25 +35,24 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      console.log('Attempting login for username:', username);
       const data = await authAPI.login(username, password);
       localStorage.setItem("access_token", data.access_token);
 
-      // Set user in store (you'll need to fetch user details)
-      setUser({
-        id: "1",
-        username,
-        email: "",
-        role: "ADMIN",
-        account_balance: 0,
-        created_at: new Date().toISOString(),
-      });
+      // Fetch actual user details from backend
+      const userData = await authAPI.getCurrentUser();
+      console.log('Logged in user data:', userData);
+      setUser(userData);
 
       toast.success("Welcome back!");
       router.push("/");
     } catch (err: any) {
+      console.error('Login error:', err);
+      console.error('Error response:', err.response?.data);
       const errorMsg = err.response?.data?.detail || "Invalid username or password";
       setError(errorMsg);
       toast.error(errorMsg);
+      // Keep the form visible so user can see the error
     } finally {
       setLoading(false);
     }

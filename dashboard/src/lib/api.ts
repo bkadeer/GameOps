@@ -56,6 +56,32 @@ export const authAPI = {
   logout: () => {
     localStorage.removeItem('access_token')
   },
+  getCurrentUser: async (): Promise<User> => {
+    const response = await api.get('/auth/me')
+    return response.data
+  },
+  listUsers: async (): Promise<User[]> => {
+    const response = await api.get('/users')
+    return response.data
+  },
+  createUser: async (data: {
+    username: string
+    password: string
+    email?: string
+    full_name?: string
+    role: 'ADMIN' | 'STAFF' | 'CUSTOMER'
+  }): Promise<User> => {
+    const response = await api.post('/users', data)
+    return response.data
+  },
+  resetPassword: async (userId: string, password: string): Promise<User> => {
+    const response = await api.put(`/users/${userId}/password`, { password })
+    return response.data
+  },
+  toggleUserStatus: async (userId: string): Promise<User> => {
+    const response = await api.put(`/users/${userId}/toggle-status`)
+    return response.data
+  },
 }
 
 export const stationsAPI = {

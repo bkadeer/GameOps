@@ -42,6 +42,7 @@ export interface User {
   full_name?: string
   role: 'ADMIN' | 'STAFF' | 'CUSTOMER'
   account_balance: number
+  is_active: boolean
   created_at: string
 }
 

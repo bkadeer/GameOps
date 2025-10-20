@@ -8,7 +8,9 @@ import StationGrid from './StationGrid'
 import StatsCards from './StatsCards'
 import AddStationModal from './AddStationModal'
 import StartSessionModal from './StartSessionModal'
+import SettingsModal from './SettingsModal'
 import AmbientClock from './AmbientClock'
+import UserBadge from './UserBadge'
 import { StatsCardSkeleton, StationCardSkeleton } from './LoadingSkeletons'
 import { useStore } from '@/store/useStore'
 import { stationsAPI, sessionsAPI, dashboardAPI, authAPI } from '@/lib/api'
@@ -21,7 +23,18 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showAddStation, setShowAddStation] = useState(false)
   const [showStartSession, setShowStartSession] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'ADMIN'
+  
+  // Debug: Log user role
+  useEffect(() => {
+    if (user) {
+      console.log('Dashboard - Current User:', user.username, 'Role:', user.role, 'isAdmin:', isAdmin)
+    }
+  }, [user, isAdmin])
 
   // WebSocket connection for real-time updates
   const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/dashboard'
@@ -168,17 +181,21 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              {user && (
-                <div className="text-right px-4 py-2 bg-neutral-800/40 rounded-xl border border-neutral-700/50">
-                  <p className="text-sm text-gray-200 font-semibold tracking-tight">{user.username}</p>
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">{user.role}</p>
-                </div>
-              )}
+              <UserBadge user={user} />
+              
               <button 
-                className="p-2.5 hover:bg-neutral-800/60 rounded-xl transition-all duration-300 hover:scale-105 border border-transparent hover:border-neutral-700/50"
-                title="Settings"
+                onClick={() => isAdmin && setShowSettings(true)}
+                disabled={!isAdmin}
+                className={`p-2.5 rounded-xl transition-all duration-300 border border-transparent ${
+                  isAdmin 
+                    ? 'hover:bg-[#ed6802]/10 hover:scale-105 hover:border-[#ed6802]/30 cursor-pointer group' 
+                    : 'opacity-40 cursor-not-allowed'
+                }`}
+                title={isAdmin ? "Settings" : "Settings (Admin Only)"}
               >
-                <Settings className="w-5 h-5 text-gray-400 hover:text-gray-300 transition-colors" />
+                <Settings className={`w-5 h-5 transition-colors ${
+                  isAdmin ? 'text-gray-400 group-hover:text-[#ed6802]' : 'text-gray-500'
+                }`} />
               </button>
               <button 
                 onClick={handleLogout}
@@ -215,13 +232,15 @@ export default function Dashboard() {
                   <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Gaming Stations</h2>
                   <p className="text-sm text-gray-400 mt-1">Manage stations and monitor active sessions</p>
                 </div>
-                <button
-                  onClick={() => setShowAddStation(true)}
-                  className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-[#ed6802] to-[#ff7a1a] hover:from-[#ff7a1a] hover:to-[#ff8c3a] text-white rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#ed6802]/30 border border-[#ff7a1a]/20"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Station
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowAddStation(true)}
+                    className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-[#ed6802] to-[#ff7a1a] hover:from-[#ff7a1a] hover:to-[#ff8c3a] text-white rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#ed6802]/30 border border-[#ff7a1a]/20"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Station
+                  </button>
+                )}
               </div>
               {stations.length === 0 ? (
                 <StationCardSkeleton />
@@ -249,6 +268,11 @@ export default function Dashboard() {
         onClose={() => setShowStartSession(false)}
         onSuccess={loadData}
         station={selectedStation}
+      />
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        currentUser={user}
       />
     </div>
   )
