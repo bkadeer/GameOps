@@ -3,19 +3,36 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
+import { useStore } from '@/store/useStore'
+import { authAPI } from '@/lib/api'
 
 export default function Home() {
   const router = useRouter()
   const [isChecking, setIsChecking] = useState(true)
+  const { setUser, clearUser } = useStore()
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      router.push('/login')
-    } else {
-      setIsChecking(false)
+    const checkAuth = async () => {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        router.push('/login')
+        return
+      }
+
+      try {
+        const userData = await authAPI.getCurrentUser()
+        setUser(userData)
+        setIsChecking(false)
+      } catch (error) {
+        console.error('Failed to fetch current user:', error)
+        clearUser()
+        localStorage.removeItem('access_token')
+        router.push('/login')
+      }
     }
-  }, [router])
+
+    checkAuth()
+  }, [router, setUser, clearUser])
 
   if (isChecking) {
     return (
