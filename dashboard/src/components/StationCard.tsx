@@ -26,7 +26,7 @@ export default function StationCard({ station, session, onStartSession, onExtend
   const autoEndSession = async (sessionToEnd: Session) => {
     try {
       await sessionsAPI.end(sessionToEnd.id)
-      toast.success('Session ended automatically - time expired')
+      toast.success(`Session time expired for ${station.name}`)
       // Trigger data refresh if callback provided
       if (onUpdate) {
         onUpdate()
