@@ -1,22 +1,30 @@
 'use client'
 
 import { useState } from 'react'
-import type { Station } from '@/types'
-import { stationsAPI } from '@/lib/api'
+import type { Station, Session } from '@/types'
+import { stationsAPI, sessionsAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 import StationCard from './StationCard'
 import EditStationModal from './EditStationModal'
+import ExtendSessionModal from './ExtendSessionModal'
+import EndSessionModal from './EndSessionModal'
 
 interface StationGridProps {
   stations: Station[]
+  sessions: Session[] // Add sessions to map to stations
   onStartSession: (station: Station) => void
   onUpdate?: () => void
 }
 
-export default function StationGrid({ stations, onStartSession, onUpdate }: StationGridProps) {
+export default function StationGrid({ stations, sessions, onStartSession, onUpdate }: StationGridProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [editStation, setEditStation] = useState<Station | null>(null)
+  const [extendSession, setExtendSession] = useState<Session | null>(null)
+  const [endSession, setEndSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(false)
+  
+  // Create a map of station_id -> session for quick lookup
+  const sessionMap = new Map(sessions.map(s => [s.station_id, s]))
 
   const handleDelete = async (station: Station) => {
     if (station.status === 'IN_SESSION') {
@@ -43,15 +51,21 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {sortedStations.map((station) => (
-        <StationCard
-          key={station.id}
-          station={station}
-          onStartSession={onStartSession}
-          onEdit={setEditStation}
-          onDelete={() => setDeleteConfirm(station.id)}
-        />
-      ))}
+      {sortedStations.map((station) => {
+        const stationSession = sessionMap.get(station.id)
+        return (
+          <StationCard
+            key={station.id}
+            station={station}
+            session={stationSession}
+            onStartSession={onStartSession}
+            onExtendSession={setExtendSession}
+            onEndSession={setEndSession}
+            onEdit={setEditStation}
+            onDelete={() => setDeleteConfirm(station.id)}
+          />
+        )
+      })}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
@@ -92,6 +106,28 @@ export default function StationGrid({ stations, onStartSession, onUpdate }: Stat
         onClose={() => setEditStation(null)}
         onSuccess={() => {
           setEditStation(null)
+          if (onUpdate) onUpdate()
+        }}
+      />
+      
+      {/* Extend Session Modal */}
+      <ExtendSessionModal
+        isOpen={!!extendSession}
+        session={extendSession}
+        onClose={() => setExtendSession(null)}
+        onSuccess={() => {
+          setExtendSession(null)
+          if (onUpdate) onUpdate()
+        }}
+      />
+      
+      {/* End Session Modal */}
+      <EndSessionModal
+        isOpen={!!endSession}
+        session={endSession}
+        onClose={() => setEndSession(null)}
+        onSuccess={() => {
+          setEndSession(null)
           if (onUpdate) onUpdate()
         }}
       />

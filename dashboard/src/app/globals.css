@@ -143,3 +143,35 @@ body {
     stroke-dashoffset: -800;
   }
 }
+
+/* Emerald Flux - Diagonal flowing energy wave animation */
+
+/* Main diagonal energy band flowing across the surface */
+@keyframes emeraldFlux {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Subtle pulsing glow for holographic depth */
+@keyframes fluxGlow {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Scanline texture for holographic effect */
+@keyframes scanlines {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(4px);
+  }
+}

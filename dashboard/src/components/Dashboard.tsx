@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut, Plus, Wifi, WifiOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import StationGrid from './StationGrid'
-import SessionsList from './SessionsList'
 import StatsCards from './StatsCards'
 import AddStationModal from './AddStationModal'
 import StartSessionModal from './StartSessionModal'
 import AmbientClock from './AmbientClock'
-import { StatsCardSkeleton, StationCardSkeleton, SessionsListSkeleton } from './LoadingSkeletons'
+import { StatsCardSkeleton, StationCardSkeleton } from './LoadingSkeletons'
 import { useStore } from '@/store/useStore'
 import { stationsAPI, sessionsAPI, dashboardAPI, authAPI } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -209,12 +208,12 @@ export default function Dashboard() {
               {!stats ? <StatsCardSkeleton /> : <StatsCards stats={stats} />}
             </div>
 
-            {/* Station Grid */}
+            {/* Unified Station Grid with Sessions */}
             <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Gaming Stations</h2>
-                  <p className="text-sm text-gray-400 mt-1">Manage and monitor all stations</p>
+                  <p className="text-sm text-gray-400 mt-1">Manage stations and monitor active sessions</p>
                 </div>
                 <button
                   onClick={() => setShowAddStation(true)}
@@ -228,24 +227,9 @@ export default function Dashboard() {
                 <StationCardSkeleton />
               ) : (
                 <StationGrid 
-                  stations={stations} 
+                  stations={stations}
+                  sessions={sessions.filter(s => s.status === 'ACTIVE')}
                   onStartSession={handleStartSession}
-                  onUpdate={loadData}
-                />
-              )}
-            </div>
-
-            {/* Active Sessions */}
-            <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-100 tracking-tight">Active Sessions</h2>
-                <p className="text-sm text-gray-400 mt-1">Currently running gaming sessions</p>
-              </div>
-              {sessions.length === 0 ? (
-                <SessionsListSkeleton />
-              ) : (
-                <SessionsList 
-                  sessions={sessions.filter(s => s.status === 'ACTIVE')} 
                   onUpdate={loadData}
                 />
               )}
