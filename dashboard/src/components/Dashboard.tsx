@@ -11,6 +11,7 @@ import StartSessionModal from './StartSessionModal'
 import SettingsModal from './SettingsModal'
 import AmbientClock from './AmbientClock'
 import UserBadge from './UserBadge'
+import StatusBadge from './StatusBadge'
 import { StatsCardSkeleton, StationCardSkeleton } from './LoadingSkeletons'
 import { useStore } from '@/store/useStore'
 import { stationsAPI, sessionsAPI, dashboardAPI, authAPI } from '@/lib/api'
@@ -154,32 +155,15 @@ export default function Dashboard() {
               {/* Ambient Clock */}
               <AmbientClock />
               
-              {/* WebSocket Status Indicator - Enhanced */}
-              <div 
-                className={`flex items-center gap-2.5 px-4 py-2 rounded-full border shadow-lg transition-all duration-300 ${
-                  !isInitializing && isConnected 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 shadow-emerald-500/10' 
-                    : 'bg-gray-500/10 border-gray-500/30 shadow-gray-500/10 opacity-50'
-                }`}
-              >
-                <div className="relative">
-                  {!isInitializing && isConnected ? (
-                    <>
-                      <Wifi className="w-4 h-4 text-emerald-400" />
-                      <div className="absolute inset-0 animate-ping">
-                        <Wifi className="w-4 h-4 text-emerald-400 opacity-40" />
-                      </div>
-                    </>
-                  ) : (
-                    <WifiOff className="w-4 h-4 text-gray-400" />
-                  )}
-                </div>
-                <span className={`text-xs font-semibold tracking-wide ${
-                  !isInitializing && isConnected ? 'text-emerald-400' : 'text-gray-400'
-                }`}>
-                  {!isInitializing && isConnected ? 'LIVE' : 'OFFLINE'}
-                </span>
-              </div>
+              {/* WebSocket Status Indicator - Using StatusBadge */}
+              <StatusBadge
+                icon={!isInitializing && isConnected ? Wifi : WifiOff}
+                label={!isInitializing && isConnected ? 'LIVE' : 'OFFLINE'}
+                variant={!isInitializing && isConnected ? 'success' : 'neutral'}
+                size="md"
+                animate={!isInitializing && isConnected}
+                className={!isInitializing && isConnected ? '' : 'opacity-50'}
+              />
 
               <UserBadge user={user} />
               

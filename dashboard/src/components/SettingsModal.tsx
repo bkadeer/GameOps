@@ -5,6 +5,7 @@ import { X, Key, Trash2, UserPlus, Shield, User as UserIcon } from 'lucide-react
 import toast from 'react-hot-toast'
 import { authAPI } from '@/lib/api'
 import type { User } from '@/types'
+import StatusBadge from './StatusBadge'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -228,39 +229,43 @@ export default function SettingsModal({ isOpen, onClose, currentUser }: Settings
           </div>
 
           {/* Tabs - Only show Manage Users for ADMIN */}
-          <div className="flex border-b border-neutral-700/50 px-6">
+          <div className="flex gap-3 border-b border-neutral-700/50 px-6 py-3">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`px-5 py-4 font-medium transition-all relative ${
-                activeTab === 'profile'
-                  ? 'text-[#ed6802]'
-                  : 'text-[#A0A0A0] hover:text-[#E5E5E5]'
-              }`}
+              className="transition-all"
             >
-              <div className="flex items-center gap-2">
-                <UserIcon className="w-4 h-4" />
-                My Profile
-              </div>
-              {activeTab === 'profile' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ed6802]" />
-              )}
+              <StatusBadge
+                icon={UserIcon}
+                label="My Profile"
+                variant={activeTab === 'profile' ? 'custom' : 'neutral'}
+                size="lg"
+                customColors={activeTab === 'profile' ? {
+                  bg: 'bg-[#ed6802]/10',
+                  border: 'border-[#ed6802]/30',
+                  text: 'text-[#ed6802]',
+                  icon: 'text-[#ed6802]',
+                } : undefined}
+                className={activeTab === 'profile' ? '' : 'opacity-60 hover:opacity-100'}
+              />
             </button>
             {currentUser?.role === 'ADMIN' && (
               <button
                 onClick={() => setActiveTab('manage')}
-                className={`px-5 py-4 font-medium transition-all relative ${
-                  activeTab === 'manage'
-                    ? 'text-[#ed6802]'
-                    : 'text-[#A0A0A0] hover:text-[#E5E5E5]'
-                }`}
+                className="transition-all"
               >
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Manage Users
-                </div>
-                {activeTab === 'manage' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ed6802]" />
-                )}
+                <StatusBadge
+                  icon={Shield}
+                  label="Manage Users"
+                  variant={activeTab === 'manage' ? 'custom' : 'neutral'}
+                  size="lg"
+                  customColors={activeTab === 'manage' ? {
+                    bg: 'bg-[#ed6802]/10',
+                    border: 'border-[#ed6802]/30',
+                    text: 'text-[#ed6802]',
+                    icon: 'text-[#ed6802]',
+                  } : undefined}
+                  className={activeTab === 'manage' ? '' : 'opacity-60 hover:opacity-100'}
+                />
               </button>
             )}
           </div>
@@ -318,11 +323,16 @@ export default function SettingsModal({ isOpen, onClose, currentUser }: Settings
             {activeTab === 'manage' && isAdmin && (
               <div className="space-y-8">
                 {/* Add User Form */}
-                <div>
-                  <h3 className="text-base font-semibold text-[#E5E5E5] mb-4">Add New User</h3>
-                  <form onSubmit={handleCreateUser} className="space-y-5">
-                    <div>
-                      <label className="text-sm font-medium text-[#A0A0A0] block mb-3">
+                <div className="bg-[#1E1E1E] rounded-xl p-6 border border-neutral-700/30">
+                  <br />
+                  <h3 className="text-base font-semibold text-[#E5E5E5] mb-6 flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-[#ed6802]" />
+                    Add New User
+                  </h3>
+                  <form onSubmit={handleCreateUser} className="space-y-6">
+                    {/* Username Field */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[#E5E5E5] block">
                         Username / Account Name
                       </label>
                       <input
@@ -330,61 +340,74 @@ export default function SettingsModal({ isOpen, onClose, currentUser }: Settings
                         required
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors placeholder:text-[#666666]"
+                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] focus:ring-1 focus:ring-[#ed6802]/20 transition-all placeholder:text-[#666666]"
                         placeholder="Enter username"
                       />
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-[#A0A0A0] block mb-3">
-                        Email (Optional)
+                    {/* Email Field */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[#E5E5E5] block">
+                        <br /> Email <span className="text-[#666666] font-normal">(Optional) </span>
                       </label>
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors placeholder:text-[#666666]"
+                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] focus:ring-1 focus:ring-[#ed6802]/20 transition-all placeholder:text-[#666666]"
                         placeholder="user@example.com"
                       />
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-[#A0A0A0] block mb-3">
-                        Temporary Password
+                    {/* Password Field */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[#E5E5E5] block">
+                        <br />Temporary Password
                       </label>
                       <input
                         type="text"
                         required
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors placeholder:text-[#666666]"
+                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] focus:ring-1 focus:ring-[#ed6802]/20 transition-all placeholder:text-[#666666]"
                         placeholder="e.g., TempPass123"
                         minLength={8}
                       />
-                      <div className="mt-2 ml-1">
-                        <p className="text-xs text-[#A0A0A0] mb-1">Password must contain:</p>
-                        <ul className="text-xs text-[#666666] ml-4 space-y-0.5">
-                          <li>• At least 8 characters</li>
-                          <li>• One uppercase letter (A-Z)</li>
-                          <li>• One lowercase letter (a-z)</li>
-                          <li>• One number (0-9)</li>
+                      <div className="mt-3 p-3 bg-[#252525] rounded-lg border border-[#333333]">
+                        <p className="text-xs text-[#A0A0A0] font-medium mb-2"> <br />Password Requirements:</p>
+                        <ul className="text-xs text-[#666666] space-y-1">
+                          <li className="flex items-center gap-2">
+                            <span className="text-[#ed6802]">•</span> At least 8 characters
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-[#ed6802]">•</span> One uppercase letter (A-Z)
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-[#ed6802]">•</span> One lowercase letter (a-z)
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-[#ed6802]">•</span> One number (0-9)
+                          </li>
                         </ul>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-[#A0A0A0] block mb-3">
+                    {/* Role Field */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[#E5E5E5] block">
+                        <br />
                         User Type / Role
                       </label>
                       <select
                         required
                         value={formData.role}
                         onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] transition-colors cursor-pointer"
+                        className="w-full px-4 py-3 bg-[#252525] border border-[#333333] rounded-lg text-[#E5E5E5] focus:outline-none focus:border-[#ed6802] focus:ring-1 focus:ring-[#ed6802]/20 transition-all cursor-pointer"
                       >
                         <option value="STAFF">Staff</option>
                         <option value="ADMIN">Admin</option>
                       </select>
+                      <br />
                     </div>
 
                     <button
