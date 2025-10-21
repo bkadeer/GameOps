@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [showStartSession, setShowStartSession] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
+  const [activeFilter, setActiveFilter] = useState<'active' | 'available' | null>(null)
   
   // Check if user is admin
   const isAdmin = user?.role === 'ADMIN'
@@ -206,7 +207,13 @@ export default function Dashboard() {
           <div className="space-y-6 md:space-y-8">
             {/* Stats Cards */}
             <div className="animate-fade-in">
-              {!stats ? <StatsCardSkeleton /> : <StatsCards stats={stats} />}
+              {!stats ? <StatsCardSkeleton /> : (
+                <StatsCards 
+                  stats={stats} 
+                  activeFilter={activeFilter}
+                  onFilterChange={(filter) => setActiveFilter(activeFilter === filter ? null : filter)}
+                />
+              )}
             </div>
 
             {/* Unified Station Grid with Sessions */}
@@ -234,6 +241,7 @@ export default function Dashboard() {
                   sessions={sessions.filter(s => s.status === 'ACTIVE')}
                   onStartSession={handleStartSession}
                   onUpdate={loadData}
+                  activeFilter={activeFilter}
                 />
               )}
             </div>

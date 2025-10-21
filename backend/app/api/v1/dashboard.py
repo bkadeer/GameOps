@@ -40,12 +40,19 @@ async def get_dashboard(
     )
     available_stations = result.scalar()
     
-    # Calculate today's revenue
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Calculate today's revenue (6AM to 6AM cycle)
+    now = datetime.now(timezone.utc)
+    if now.hour < 6:
+        # Before 6AM, use yesterday 6AM to today 6AM
+        today_6am = now.replace(hour=6, minute=0, second=0, microsecond=0) - timedelta(days=1)
+    else:
+        # After 6AM, use today 6AM to tomorrow 6AM
+        today_6am = now.replace(hour=6, minute=0, second=0, microsecond=0)
+    
     result = await db.execute(
         select(func.sum(Payment.amount)).where(
             Payment.status == PaymentStatus.COMPLETED,
-            Payment.created_at >= today_start
+            Payment.created_at >= today_6am
         )
     )
     revenue_today = result.scalar() or 0.0

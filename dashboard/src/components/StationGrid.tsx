@@ -14,9 +14,10 @@ interface StationGridProps {
   sessions: Session[] // Add sessions to map to stations
   onStartSession: (station: Station) => void
   onUpdate?: () => void
+  activeFilter?: 'active' | 'available' | null
 }
 
-export default function StationGrid({ stations, sessions, onStartSession, onUpdate }: StationGridProps) {
+export default function StationGrid({ stations, sessions, onStartSession, onUpdate, activeFilter }: StationGridProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [editStation, setEditStation] = useState<Station | null>(null)
   const [extendSession, setExtendSession] = useState<Session | null>(null)
@@ -25,6 +26,21 @@ export default function StationGrid({ stations, sessions, onStartSession, onUpda
   
   // Create a map of station_id -> session for quick lookup
   const sessionMap = new Map(sessions.map(s => [s.station_id, s]))
+  
+  // Filter stations based on active filter
+  const filteredStations = stations.filter(station => {
+    if (!activeFilter) return true
+    
+    const hasActiveSession = sessionMap.has(station.id)
+    
+    if (activeFilter === 'active') {
+      return hasActiveSession
+    } else if (activeFilter === 'available') {
+      return station.status === 'ONLINE' && !hasActiveSession
+    }
+    
+    return true
+  })
 
   const handleDelete = async (station: Station) => {
     if (station.status === 'IN_SESSION') {
@@ -46,25 +62,32 @@ export default function StationGrid({ stations, sessions, onStartSession, onUpda
     }
   }
 
-  // Sort stations by name to maintain consistent order
-  const sortedStations = [...stations].sort((a, b) => a.name.localeCompare(b.name))
+  // Sort filtered stations by name to maintain consistent order
+  const sortedStations = [...filteredStations].sort((a, b) => a.name.localeCompare(b.name))
+  
+  // Determine if stations should pulse (when filter is active)
+  const shouldPulse = activeFilter !== null
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {sortedStations.map((station) => {
         const stationSession = sessionMap.get(station.id)
         return (
-          <StationCard
+          <div 
             key={station.id}
-            station={station}
-            session={stationSession}
-            onStartSession={onStartSession}
-            onExtendSession={setExtendSession}
-            onEndSession={setEndSession}
-            onEdit={setEditStation}
-            onDelete={() => setDeleteConfirm(station.id)}
-            onUpdate={onUpdate}
-          />
+            className={`transition-all duration-500 ${shouldPulse ? 'animate-pulse-subtle' : ''}`}
+          >
+            <StationCard
+              station={station}
+              session={stationSession}
+              onStartSession={onStartSession}
+              onExtendSession={setExtendSession}
+              onEndSession={setEndSession}
+              onEdit={setEditStation}
+              onDelete={() => setDeleteConfirm(station.id)}
+              onUpdate={onUpdate}
+            />
+          </div>
         )
       })}
 
