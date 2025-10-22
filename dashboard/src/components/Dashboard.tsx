@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut, Plus, Wifi, WifiOff } from 'lucide-react'
+import { Monitor, Gamepad2, Activity, DollarSign, Users, Clock, Settings, LogOut, Plus, Wifi, WifiOff, BarChart3 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import StationGrid from './StationGrid'
 import StatsCards from './StatsCards'
@@ -167,6 +167,17 @@ export default function Dashboard() {
               />
 
               <UserBadge user={user} />
+              
+              {/* Analytics Button (Admin Only) */}
+              {isAdmin && (
+                <button 
+                  onClick={() => router.push('/analytics')}
+                  className="p-2.5 rounded-xl transition-all duration-300 border border-transparent hover:bg-emerald-500/10 hover:scale-105 hover:border-emerald-500/30 cursor-pointer group"
+                  title="Analytics Dashboard"
+                >
+                  <BarChart3 className="w-5 h-5 text-gray-400 group-hover:text-emerald-400 transition-colors" />
+                </button>
+              )}
               
               <button 
                 onClick={() => isAdmin && setShowSettings(true)}

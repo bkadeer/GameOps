@@ -146,4 +146,23 @@ export const dashboardAPI = {
   },
 }
 
+export const analyticsAPI = {
+  getRevenue: async (period: 'day' | 'week' | 'month' = 'day') => {
+    const response = await api.get(`/analytics/revenue?period=${period}`)
+    return response.data
+  },
+  getSessions: async (period: 'day' | 'week' | 'month' = 'day') => {
+    const response = await api.get(`/analytics/sessions?period=${period}`)
+    return response.data
+  },
+  getStationUtilization: async () => {
+    const response = await api.get('/analytics/utilization')
+    return response.data
+  },
+  getPeakHours: async (period: 'day' | 'week' | 'month' = 'day') => {
+    const response = await api.get(`/analytics/peak-hours?period=${period}`)
+    return response.data
+  },
+}
+
 export default api

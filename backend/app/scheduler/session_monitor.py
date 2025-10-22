@@ -84,20 +84,21 @@ class SessionMonitor:
                     await self._send_warning(session, "1min", int(time_remaining))
     
     async def _expire_session(self, db: AsyncSession, session: Session):
-        """Expire a session"""
+        """Expire a session and reset station to online (ready for next customer)"""
         logger.info(f"Expiring session {session.id} for station {session.station_id}")
         
-        # Update session status
+        # Update session status with timezone-aware datetime
         session.status = SessionStatus.EXPIRED
-        session.actual_end_at = datetime.utcnow()
+        session.actual_end_at = datetime.now(timezone.utc)
         
-        # Update station status
+        # Update station status to ONLINE (ready for next customer)
         result = await db.execute(
             select(Station).where(Station.id == session.station_id)
         )
         station = result.scalar_one_or_none()
         if station:
             station.status = StationStatus.ONLINE
+            logger.info(f"Station {station.name} ({station.id}) reset to ONLINE")
         
         await db.commit()
         

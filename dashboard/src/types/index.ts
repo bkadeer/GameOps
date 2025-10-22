@@ -61,3 +61,59 @@ export interface DashboardStats {
   available_stations: number
   revenue_today: number
 }
+
+export interface RevenueData {
+  today: number
+  yesterday: number
+  change_percent: number
+  total_period: number
+  avg_per_period: number
+  revenue_per_session: number
+  hourly: Array<{
+    hour: number
+    revenue: number
+    sessions: number
+  }>
+  daily: Array<{
+    date: string
+    revenue: number
+    sessions: number
+  }>
+  weekly: Array<{
+    week: string
+    revenue: number
+    sessions: number
+  }>
+}
+
+export interface SessionAnalytics {
+  total_today: number
+  active_now: number
+  avg_duration: number
+  hourly: Array<{ hour: number; count: number; revenue: number }>
+  daily: Array<{ date: string; count: number; avg_duration: number }>
+}
+
+export interface StationUtilization {
+  stations: Array<{
+    id: string
+    name: string
+    utilization_percent: number
+    total_sessions: number
+    total_hours: number
+    revenue: number
+  }>
+  overall_utilization: number
+  total_stations: number
+}
+
+export interface PeakHoursData {
+  heatmap: Array<{
+    day: number // 0-6 (Sun-Sat)
+    hour: number // 0-23
+    value: number // session count
+  }>
+  peak_day: string
+  peak_hour: number
+  busiest_time: string
+}

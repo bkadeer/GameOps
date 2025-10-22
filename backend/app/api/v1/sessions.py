@@ -16,6 +16,7 @@ from app.websocket.manager import connection_manager
 from app.websocket.dashboard_manager import dashboard_manager
 from app.core.redis import redis_manager
 from app.services.event_logger import EventLogger, EventType
+from app.core.timezone import get_current_time, format_datetime_for_display
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ async def create_session(
             detail="Station is already in use"
         )
     
+    # Only ONLINE stations can start sessions
     if station.status != StationStatus.ONLINE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,9 +86,13 @@ async def create_session(
         db.add(payment)
         await db.flush()
         
-        # Create session with timezone-aware datetime
+        # Create session with timezone-aware datetime (stored as UTC in database)
         started_at = datetime.now(timezone.utc)
         scheduled_end_at = started_at + timedelta(minutes=session_data.duration_minutes)
+        
+        # Log local time for debugging
+        local_time = get_current_time()
+        logger.info(f"Creating session - UTC: {started_at.isoformat()}, Local (CST): {local_time.isoformat()}")
         
         session = Session(
             user_name=staff_username,  # Track which staff member created the session
@@ -109,7 +115,7 @@ async def create_session(
         await db.refresh(session)
         await db.refresh(station)  # Refresh station to load all attributes
         
-        logger.info(f"Session created successfully: {session.id} for station {station.name}")
+        logger.info(f"Session created: {session.id} for {station.name} - Started: {format_datetime_for_display(started_at)}")
         
         # Notify agent via WebSocket
         await connection_manager.send_to_station(str(session.station_id), {
@@ -301,13 +307,14 @@ async def stop_session(
     session.status = SessionStatus.STOPPED
     session.actual_end_at = datetime.now(timezone.utc)
     
-    # Update station status
+    # Update station status to ONLINE (ready for next customer)
     result = await db.execute(
         select(Station).where(Station.id == session.station_id)
     )
     station = result.scalar_one_or_none()
     if station:
         station.status = StationStatus.ONLINE
+        logger.info(f"Station {station.name} reset to ONLINE after session stop")
     
     await db.commit()
     await db.refresh(session)
