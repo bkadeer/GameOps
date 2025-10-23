@@ -319,7 +319,9 @@ export default function StationCard({ station, session, onStartSession, onExtend
                       <Cpu className="w-4 h-4" />
                       CPU
                     </span>
-                    <span className="text-gray-200 text-right truncate font-semibold text-xs">{station.specs.cpu}</span>
+                    <span className="text-gray-200 text-right truncate font-semibold text-xs">
+                      {typeof station.specs.cpu === 'string' ? station.specs.cpu : 'N/A'}
+                    </span>
                   </div>
                 )}
                 {station.specs.ram_gb && (
@@ -328,7 +330,11 @@ export default function StationCard({ station, session, onStartSession, onExtend
                       <MemoryStick className="w-4 h-4" />
                       RAM
                     </span>
-                    <span className="text-gray-200 text-right font-semibold">{station.specs.ram_gb}GB</span>
+                    <span className="text-gray-200 text-right font-semibold">
+                      {typeof station.specs.ram_gb === 'number' || typeof station.specs.ram_gb === 'string' 
+                        ? `${station.specs.ram_gb}GB` 
+                        : 'N/A'}
+                    </span>
                   </div>
                 )}
               </>

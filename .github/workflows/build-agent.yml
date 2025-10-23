@@ -1,0 +1,36 @@
+name: Build Windows Agent
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    paths:
+      - 'pc-agent/**'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        cd pc-agent
+        pip install -r requirements.txt
+        pip install pyinstaller
+    
+    - name: Build Windows executable
+      run: |
+        cd pc-agent
+        pyinstaller --onefile --noconsole --name GameOpsAgent main.py
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: GameOpsAgent-Windows
+        path: pc-agent/dist/GameOpsAgent.exe
