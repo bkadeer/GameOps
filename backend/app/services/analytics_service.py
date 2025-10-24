@@ -241,8 +241,8 @@ class AnalyticsService:
         # Query sessions grouped by day of week and hour (in CST timezone)
         query = text("""
             SELECT 
-                EXTRACT(DOW FROM started_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') as day,
-                EXTRACT(HOUR FROM started_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') as hour,
+                EXTRACT(DOW FROM started_at AT TIME ZONE 'America/Chicago') as day,
+                EXTRACT(HOUR FROM started_at AT TIME ZONE 'America/Chicago') as hour,
                 COUNT(*) as session_count,
                 SUM(duration_minutes + extended_minutes) as total_minutes,
                 COUNT(DISTINCT user_name) as unique_users
@@ -326,7 +326,7 @@ class AnalyticsService:
         """Get hourly revenue breakdown for today in CST timezone"""
         query = text("""
             SELECT 
-                EXTRACT(HOUR FROM p.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') as hour,
+                EXTRACT(HOUR FROM p.created_at AT TIME ZONE 'America/Chicago') as hour,
                 COALESCE(SUM(p.amount), 0) as revenue,
                 COUNT(DISTINCT s.id) as sessions
             FROM payments p
@@ -334,7 +334,7 @@ class AnalyticsService:
             WHERE p.created_at >= :start 
                 AND p.created_at < :end
                 AND p.status = 'COMPLETED'
-            GROUP BY EXTRACT(HOUR FROM p.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago')
+            GROUP BY EXTRACT(HOUR FROM p.created_at AT TIME ZONE 'America/Chicago')
             ORDER BY hour
         """)
         result = await self.db.execute(query, {'start': start, 'end': end})
@@ -353,7 +353,7 @@ class AnalyticsService:
         """Get daily revenue breakdown"""
         query = text("""
             SELECT 
-                DATE(p.created_at) as date,
+                DATE(p.created_at AT TIME ZONE 'America/Chicago') as date,
                 COALESCE(SUM(p.amount), 0) as revenue,
                 COUNT(DISTINCT s.id) as sessions
             FROM payments p
@@ -361,7 +361,7 @@ class AnalyticsService:
             WHERE p.created_at >= :start 
                 AND p.created_at < :end
                 AND p.status = 'COMPLETED'
-            GROUP BY DATE(p.created_at)
+            GROUP BY DATE(p.created_at AT TIME ZONE 'America/Chicago')
             ORDER BY date
         """)
         result = await self.db.execute(query, {'start': start, 'end': end})
@@ -470,7 +470,7 @@ class AnalyticsService:
         """Get hourly session distribution in CST timezone"""
         query = text("""
             SELECT 
-                EXTRACT(HOUR FROM started_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago') as hour,
+                EXTRACT(HOUR FROM started_at AT TIME ZONE 'America/Chicago') as hour,
                 COUNT(*) as count,
                 COALESCE(SUM(p.amount), 0) as revenue
             FROM sessions s
@@ -495,12 +495,12 @@ class AnalyticsService:
         """Get daily session distribution"""
         query = text("""
             SELECT 
-                DATE(started_at) as date,
+                DATE(started_at AT TIME ZONE 'America/Chicago') as date,
                 COUNT(*) as count,
                 AVG(duration_minutes + extended_minutes) as avg_duration
             FROM sessions
             WHERE started_at >= :start AND started_at < :end
-            GROUP BY date
+            GROUP BY DATE(started_at AT TIME ZONE 'America/Chicago')
             ORDER BY date
         """)
         result = await self.db.execute(query, {'start': start, 'end': end})
@@ -534,7 +534,7 @@ class AnalyticsService:
     async def _get_station_metrics(self, station_id: str) -> Dict[str, Any]:
         """Get metrics for a specific station"""
         # Last 30 days
-        start_date = datetime.utcnow() - timedelta(days=30)
+        start_date = datetime.now(timezone.utc) - timedelta(days=30)
         
         query = text("""
             SELECT 
