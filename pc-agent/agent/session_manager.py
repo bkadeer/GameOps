@@ -1,11 +1,11 @@
-"""
-Session management - tracks active sessions and enforces time limits
+"""Session management - tracks active sessions and enforces time limits
 """
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from .system_control import SystemControl
+from .lock_overlay import LockOverlay
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,11 @@ class SessionManager:
         self.current_session: Optional[Dict[str, Any]] = None
         self.session_timer_task: Optional[asyncio.Task] = None
         self.warning_shown = False
+        self.lock_overlay: Optional[LockOverlay] = None
+        
+        # Initialize lock overlay if auto_lock is enabled
+        if self.config.get('features.auto_lock', True):
+            self.lock_overlay = LockOverlay()
     
     def start_session(self, session_data: Dict[str, Any]):
         """Start a new gaming session"""
@@ -34,6 +39,11 @@ class SessionManager:
             logger.info(f"Session started: {self.current_session['id']}")
             logger.info(f"Duration: {self.current_session['duration_minutes']} minutes")
             logger.info(f"Ends at: {self.current_session['scheduled_end_at']}")
+            
+            # Hide lock overlay if it was shown
+            if self.lock_overlay and self.lock_overlay.visible:
+                logger.info("Hiding lock overlay for new session")
+                self.lock_overlay.hide()
             
             # Unlock workstation if locked
             if self.system_control.is_workstation_locked():
@@ -74,6 +84,17 @@ class SessionManager:
             logger.info(f"Session extended by {additional_minutes} minutes")
             logger.info(f"New end time: {self.current_session['scheduled_end_at']}")
             
+            # Hide lock overlay if it was shown
+            if self.lock_overlay and self.lock_overlay.visible:
+                logger.info("Hiding lock overlay after session extension")
+                self.lock_overlay.hide()
+            
+            # Unlock workstation if it was locked due to session expiry
+            if self.system_control.is_workstation_locked():
+                logger.info("Workstation is locked - user will need to unlock manually")
+                # Note: Windows doesn't allow programmatic unlock for security
+                # User will need to unlock manually, but session will be active
+            
             # Show notification
             self.system_control.show_notification(
                 "Session Extended",
@@ -107,12 +128,16 @@ class SessionManager:
                 f"Your gaming session has ended. Reason: {reason}"
             )
             
-            # Grace period before logout
+            # Grace period before lock/logout
             grace_period = self.config.get('session.grace_period', 60)
             if grace_period > 0:
+                if self.config.get('features.auto_lock', True):
+                    action = "frozen (keyboard/mouse disabled)"
+                else:
+                    action = "logged out"
                 self.system_control.show_notification(
-                    "Logout Warning",
-                    f"You will be logged out in {grace_period} seconds. Please save your work."
+                    "Session Ending",
+                    f"Your screen will be {action} in {grace_period} seconds. Please save your work."
                 )
             
             # Allow system sleep
@@ -157,8 +182,22 @@ class SessionManager:
                     logger.warning("Session time expired")
                     self.end_session("time_expired")
                     
-                    # Auto-logout if enabled
-                    if self.config.get('features.auto_logout', True):
+                    # Show lock overlay instead of logout if auto_lock is enabled
+                    if self.config.get('features.auto_lock', True):
+                        grace_period = self.config.get('session.grace_period', 60)
+                        await asyncio.sleep(grace_period)
+                        
+                        logger.info("Showing lock overlay with input blocking")
+                        
+                        # Show fullscreen lock overlay (blocks keyboard/mouse)
+                        if self.lock_overlay:
+                            self.lock_overlay.show()
+                        
+                        # Optionally lock Windows workstation (requires password to unlock)
+                        # Disabled by default - overlay with input blocking is sufficient
+                        # self.system_control.lock_workstation()
+                    elif self.config.get('features.auto_logout', False):
+                        # Fallback to logout if auto_lock is disabled but auto_logout is enabled
                         grace_period = self.config.get('session.grace_period', 60)
                         await asyncio.sleep(grace_period)
                         

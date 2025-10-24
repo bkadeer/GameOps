@@ -1,12 +1,12 @@
 agent:
-  station_id: 8d1bf804-8bf4-4e95-be9e-3a818627895c
-  station_name: PC-1
+  station_id: 7860f893-996d-477c-adac-b24e655a7d03
+  station_name: PC-LENOVO
 backend:
-  api_url: http://localhost:8000/api/v1
+  api_url: http://10.0.0.240:8000/api/v1
   heartbeat_interval: 30
   reconnect_interval: 5
-  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZ2VudF84ZDFiZjgwNC04YmY0LTRlOTUtYmU5ZS0zYTgxODYyNzg5NWMiLCJzdGF0aW9uX2lkIjoiOGQxYmY4MDQtOGJmNC00ZTk1LWJlOWUtM2E4MTg2Mjc4OTVjIiwidHlwZSI6ImFnZW50IiwiZXhwIjoxNzYwODQ1ODMxLCJpYXQiOjE3NjA3NTk0MzF9.YKJ3nnDa2Qsu0FRJnD8IVqK4u404X6huvDYeghHoH-E
-  url: ws://localhost:8000/ws/agent
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZ2VudF83ODYwZjg5My05OTZkLTQ3N2MtYWRhYy1iMjRlNjU1YTdkMDMiLCJzdGF0aW9uX2lkIjoiNzg2MGY4OTMtOTk2ZC00NzdjLWFkYWMtYjI0ZTY1NWE3ZDAzIiwidHlwZSI6ImFnZW50IiwiZXhwIjoxNzkyNzgyMTczLCJpYXQiOjE3NjEyNDYxNzN9.xajs9LMq5YyxaZ4r7Os9Q4OcG8l3AlocArdldU5Pjls
+  url: ws://10.0.0.240:8000/ws/agent
 features:
   auto_lock: true
   auto_logout: true

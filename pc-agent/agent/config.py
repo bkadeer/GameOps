@@ -2,6 +2,7 @@
 Configuration management for PC Agent
 """
 import os
+import sys
 import yaml
 from pathlib import Path
 from typing import Dict, Any
@@ -11,10 +12,21 @@ class Config:
     """Agent configuration"""
     
     def __init__(self, config_path: str = "config.yaml"):
-        self.config_path = Path(config_path)
+        self.config_path = self._get_resource_path(config_path)
         self.config: Dict[str, Any] = {}
         self.load_config()
         self.load_env()
+    
+    def _get_resource_path(self, relative_path: str) -> Path:
+        """Get absolute path to resource, works for dev and for PyInstaller"""
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = Path(sys._MEIPASS)
+        except AttributeError:
+            # Running in normal Python environment
+            base_path = Path(__file__).parent.parent
+        
+        return base_path / relative_path
     
     def load_config(self):
         """Load configuration from YAML file"""
@@ -26,7 +38,13 @@ class Config:
     
     def load_env(self):
         """Load environment variables"""
-        load_dotenv()
+        # Try to load .env file from bundled resources or current directory
+        env_path = self._get_resource_path('.env')
+        if env_path.exists():
+            load_dotenv(env_path)
+        else:
+            # Fallback to current directory
+            load_dotenv()
         
         # Override config with environment variables
         if os.getenv('STATION_ID'):

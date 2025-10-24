@@ -14,10 +14,13 @@ interface StartSessionModalProps {
 }
 
 export default function StartSessionModal({ isOpen, onClose, onSuccess, station }: StartSessionModalProps) {
-  const presetDurations = [60, 120, 180, 300]
+  const presetDurations = [16, 60, 120, 180, 300]
   
   // Pricing: 1H $8, 2H $14, 3H $21, 4H $28, 5H $32
   const calculateAmount = (minutes: number) => {
+    // Test duration - free
+    if (minutes < 60) return 0
+    
     const hours = minutes / 60
     if (hours <= 1) return 8
     if (hours <= 2) return 14
@@ -163,7 +166,7 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
               <Clock className="w-4 h-4 inline mr-2" />
               Duration
             </label>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-5 gap-3">
               {presetDurations.map((minutes) => (
                 <button
                   key={minutes}
@@ -176,8 +179,14 @@ export default function StartSessionModal({ isOpen, onClose, onSuccess, station 
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-gray-100 font-bold text-lg">{minutes / 60}h</div>
-                    <div className="text-sm text-[#ed6802] font-semibold mt-1.5">${calculateAmount(minutes)}</div>
+                    <div className="text-gray-100 font-bold text-lg">
+                      {minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
+                    </div>
+                    <div className={`text-sm font-semibold mt-1.5 ${
+                      minutes < 60 ? 'text-cyan-400' : 'text-[#ed6802]'
+                    }`}>
+                      {minutes < 60 ? '🧪 TEST' : `$${calculateAmount(minutes)}`}
+                    </div>
                   </div>
                 </button>
               ))}
