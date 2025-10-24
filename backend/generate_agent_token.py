@@ -14,7 +14,7 @@ from app.core.security import create_agent_token
 async def generate_token():
     """Generate new agent token for PC-1 station"""
     
-    station_id = "7860f893-996d-477c-adac-b24e655a7d03"
+    station_id = "8d1bf804-8bf4-4e95-be9e-3a818627895c"
     
     async with AsyncSessionLocal() as db:
         # Get station

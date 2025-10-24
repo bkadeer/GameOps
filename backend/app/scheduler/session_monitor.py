@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.models.session import Session, SessionStatus
 from app.models.station import Station, StationStatus
 from app.websocket.manager import connection_manager
+from app.websocket.dashboard_manager import dashboard_manager
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,20 @@ class SessionMonitor:
             logger.info(f"Station {station.name} ({station.id}) reset to ONLINE")
         
         await db.commit()
+        await db.refresh(session)
+        if station:
+            await db.refresh(station)
+        
+        # Broadcast session update to all dashboards
+        from app.schemas.session import SessionResponse
+        session_dict = SessionResponse.model_validate(session).model_dump(mode='json')
+        await dashboard_manager.send_session_update(session_dict)
+        
+        # Broadcast station status update to all dashboards
+        if station:
+            from app.schemas.station import StationResponse as StationResponseSchema
+            station_dict = StationResponseSchema.model_validate(station).model_dump(mode='json')
+            await dashboard_manager.send_station_update(station_dict)
         
         # Notify agent
         if connection_manager.is_connected(str(session.station_id)):
